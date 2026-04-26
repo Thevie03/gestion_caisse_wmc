@@ -1,0 +1,116 @@
+========================================
+LISTE DES UTILISATEURS
+Généré le: 19/11/2025 à 21:57:35
+========================================
+
+TOTAL: 4 utilisateur(s)
+
+STATISTIQUES:
+- Administrateurs: 1
+- Employés/Commerçants: 2
+- Actifs: 4
+- Inactifs: 0
+
+========================================
+
+DÉTAIL DES UTILISATEURS:
+
+--- Utilisateur #1 ---
+ID: 26
+Nom: Super Admin TheVie
+Email: admin@thevie.com
+Téléphone: +221 33 000 00 00
+Rôle: ADMIN
+Statut: ADMINISTRATEUR
+Boutique: Aucune
+Boutique ID: N/A
+Actif: OUI
+Abonnement: AUCUN
+Dernière connexion: 19/11/2025 18:33:28
+Créé le: 19/11/2025 16:53:28
+Mot de passe: HASHÉ (non récupérable en clair)
+⚠️  Pour réinitialiser: Utilisez la fonction 'Réinitialiser le mot de passe' dans le dashboard admin
+
+--- Utilisateur #2 ---
+ID: 30
+Nom: CLIENT 1
+Email: client1@gestioncaisse.com
+Téléphone: +2250709686751
+Rôle: EMPLOYE
+Statut: PROPRIÉTAIRE DE BOUTIQUE
+Boutique: BOUTIQUE1
+Boutique ID: 10
+Actif: OUI
+Abonnement: ACTIF
+  - Type: Mensuel
+  - Date début: 19/11/2025
+  - Date expiration: 19/11/2026
+  - Montant: 0 FCFA
+  - Statut: ACTIF
+Dernière connexion: 19/11/2025 21:53:02
+Créé le: 19/11/2025 18:46:23
+Mot de passe: HASHÉ (non récupérable en clair)
+⚠️  Pour réinitialiser: Utilisez la fonction 'Réinitialiser le mot de passe' dans le dashboard admin
+
+--- Utilisateur #3 ---
+ID: 31
+Nom: employé 1
+Email: employe.client1@gestioncaisse.com
+Téléphone: +2250709686751
+Rôle: EMPLOYE
+Statut: EMPLOYÉ
+Boutique: BOUTIQUE1
+Boutique ID: 10
+Actif: OUI
+Abonnement: AUCUN
+Dernière connexion: 19/11/2025 21:48:18
+Créé le: 19/11/2025 21:47:45
+Mot de passe: HASHÉ (non récupérable en clair)
+⚠️  Pour réinitialiser: Utilisez la fonction 'Réinitialiser le mot de passe' dans le dashboard admin
+
+--- Utilisateur #4 ---
+ID: 25
+Nom: Super Admin
+Email: superadmin@gestioncaisse.com
+Téléphone: +221 33 000 00 00
+Rôle: SUPER_ADMIN
+Statut: ADMINISTRATEUR
+Boutique: Aucune
+Boutique ID: N/A
+Actif: OUI
+Abonnement: AUCUN
+Dernière connexion: 19/11/2025 18:28:52
+Créé le: 19/11/2025 15:43:08
+Mot de passe: HASHÉ (non récupérable en clair)
+⚠️  Pour réinitialiser: Utilisez la fonction 'Réinitialiser le mot de passe' dans le dashboard admin
+
+
+========================================
+UTILISATEURS PAR BOUTIQUE:
+========================================
+
+--- BOUTIQUE1 (ID: 10) ---
+Propriétaire: CLIENT 1 (client1@gestioncaisse.com)
+Employés: 2
+  - CLIENT 1 (client1@gestioncaisse.com) - PROPRIÉTAIRE
+  - employé 1 (employe.client1@gestioncaisse.com) - EMPLOYÉ
+
+
+========================================
+⚠️  IMPORTANT - MOTS DE PASSE
+========================================
+
+Les mots de passe sont stockés de manière sécurisée (hashés) dans la base de données.
+Il est IMPOSSIBLE de les récupérer en clair pour des raisons de sécurité.
+
+Pour réinitialiser un mot de passe:
+1. Connectez-vous au dashboard admin
+2. Allez dans 'Commerçants' ou 'Employés'
+3. Cliquez sur l'utilisateur concerné
+4. Utilisez la fonction 'Réinitialiser le mot de passe'
+
+OU utilisez la commande artisan:
+php artisan tinker
+\{"id":31,"tenant_key":null,"name":"employ\u00e9 1","email":"employe.client1@gestioncaisse.com","email_verified_at":null,"created_at":"2025-11-19T21:47:45.000000Z","updated_at":"2025-11-19T21:48:18.000000Z","role":"employe","boutique_id":10,"telephone":"+2250709686751","actif":true,"subscription_status":"expire","subscription_expires_at":"2025-11-19T21:48:18.000000Z","trial_ends_at":null,"last_login_at":"2025-11-19T21:48:18.000000Z"} = \App\Models\User::find(ID);
+\(['password' => bcrypt('nouveau_mot_de_passe')]);
+

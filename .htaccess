@@ -1,0 +1,29 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Rediriger toutes les requêtes vers le dossier public
+    # Exclure les fichiers et dossiers qui existent réellement
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+
+<FilesMatch "^\.(env|git)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+
+<Files composer.json>
+    Order allow,deny
+    Deny from all
+</Files>
+
+
+<Files composer.lock>
+    Order allow,deny
+    Deny from all
+</Files>
+

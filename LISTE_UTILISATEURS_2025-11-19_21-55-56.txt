@@ -1,0 +1,43 @@
+========================================
+LISTE DES UTILISATEURS
+Généré le: 19/11/2025 à 21:55:56
+========================================
+
+TOTAL: 4 utilisateur(s)
+
+STATISTIQUES:
+- Administrateurs: 1
+- Employés/Commerçants: 2
+- Actifs: 4
+- Inactifs: 0
+
+========================================
+
+DÉTAIL DES UTILISATEURS:
+
+--- Utilisateur #1 ---
+ID: 26
+Nom: Super Admin TheVie
+Email: thevie06@gmail.com
+mot de passe: Thevie031218
+Téléphone: +221 33 000 00 00
+Rôle: ADMIN
+Statut: ADMINISTRATEUR
+Boutique: Aucune
+Boutique ID: N/A
+Actif: OUI
+Abonnement: AUCUN
+Dernière connexion: 19/11/2025 18:33:28
+Créé le: 19/11/2025 16:53:28
+
+
+
+
+
+
+
+========================================
+UTILISATEURS PAR BOUTIQUE:
+========================================
+
+
