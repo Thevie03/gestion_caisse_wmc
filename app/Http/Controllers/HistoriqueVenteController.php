@@ -13,6 +13,8 @@ class HistoriqueVenteController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         // Vérifier que seul un admin ou le propriétaire de la boutique peut voir l'historique
         $user = auth()->user();
         if (!$user->isAdmin() && !$user->isOwner()) {

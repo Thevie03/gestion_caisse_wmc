@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#F59E0B">
+    <title>Hors connexion — WMC Caisse</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #111827;
+            color: #f9fafb;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .offline-card {
+            max-width: 480px;
+            width: 100%;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+        h1 { font-size: 1.35rem; color: #F59E0B; margin-bottom: 0.75rem; text-align: center; }
+        p { color: #9ca3af; line-height: 1.55; margin-bottom: 0.75rem; font-size: 0.95rem; }
+        .box {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+        }
+        .box strong { color: #f9fafb; }
+        .actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
+        button, a.btn {
+            background: #F59E0B;
+            color: #111827;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.7rem 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+        a.btn.secondary, button.secondary {
+            background: transparent;
+            color: #f9fafb;
+            border: 1px solid #4b5563;
+        }
+        .status { font-size: 0.8rem; color: #6b7280; margin-top: 0.75rem; text-align: center; }
+        .ok { color: #22c55e; }
+        .ko { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="offline-card">
+        <h1>📡 Application en pause</h1>
+
+        <p id="main-message">Analyse de la situation…</p>
+
+        <div class="box" id="local-help" hidden>
+            <strong>En local (127.0.0.1) — 3 situations possibles :</strong>
+            <ul style="margin: 0.5rem 0 0 1.1rem; color: #9ca3af;">
+                <li><strong style="color:#22c55e">Serveur OK</strong> → <code>php artisan serve</code> tourne, tout fonctionne normalement.</li>
+                <li><strong style="color:#F59E0B">Serveur arrêté</strong> → relancez <code>php artisan serve</code> dans le terminal.</li>
+                <li><strong style="color:#f87171">Mode hors connexion</strong> → test DevTools Offline : utilisez le POS en cache.</li>
+            </ul>
+        </div>
+
+        <div class="actions">
+            <a class="btn" href="/ventes/pos/interface">Ouvrir le POS</a>
+            <a class="btn secondary" href="/dashboard">Ouvrir le dashboard</a>
+            <button type="button" class="secondary" id="btn-retry">Vérifier le serveur</button>
+        </div>
+
+        <p class="status" id="status-line">—</p>
+        <p class="status" id="cache-line">—</p>
+    </div>
+
+    <script type="module">
+        const PAGES_CACHE = 'wmc-caisse-v1.3.4-pages';
+        const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
+        if (isLocal) {
+            document.getElementById('local-help').hidden = false;
+        }
+
+        async function isCached(path) {
+            if (!('caches' in window)) return false;
+            const cache = await caches.open(PAGES_CACHE);
+            const url = new URL(path, location.origin).href;
+            return !!(await cache.match(url) || await cache.match(path));
+        }
+
+        async function checkServer() {
+            const line = document.getElementById('status-line');
+            const msg = document.getElementById('main-message');
+
+            try {
+                const r = await fetch('/api/offline/ping', { credentials: 'same-origin', cache: 'no-store' });
+                if (r.ok) {
+                    line.innerHTML = '<span class="ok">✓ Serveur Laravel répond</span> — redirection…';
+                    msg.textContent = 'Le serveur est de retour. Redirection vers l\'application…';
+                    setTimeout(() => {
+                        location.href = localStorage.getItem('wmc_last_app_route') || '/dashboard';
+                    }, 800);
+                    return;
+                }
+            } catch {
+                // ignore
+            }
+
+            if (isLocal && navigator.onLine) {
+                line.innerHTML = '<span class="ko">✗ Serveur local ne répond pas</span> — lancez <code>php artisan serve</code>';
+                msg.textContent = 'Votre navigateur est en ligne, mais Laravel ne répond pas sur le port 8000.';
+            } else if (!navigator.onLine) {
+                line.innerHTML = '<span class="ko">Mode hors connexion actif</span> (test DevTools ou réseau coupé)';
+                msg.textContent = 'Utilisez les pages mises en cache (POS ou dashboard) si disponibles.';
+            } else {
+                line.textContent = 'Serveur inaccessible.';
+            }
+        }
+
+        async function checkCacheAndRedirect() {
+            const cacheLine = document.getElementById('cache-line');
+            const pos = await isCached('/ventes/pos/interface');
+            const dash = await isCached('/dashboard');
+            cacheLine.innerHTML =
+                `POS en cache : <span class="${pos ? 'ok' : 'ko'}">${pos ? 'oui' : 'non'}</span> — ` +
+                `Dashboard : <span class="${dash ? 'ok' : 'ko'}">${dash ? 'oui' : 'non'}</span>`;
+
+            const target = localStorage.getItem('wmc_last_app_route') || '/ventes/pos/interface';
+            if (await isCached(target)) {
+                location.replace(target);
+            }
+        }
+
+        document.getElementById('btn-retry').addEventListener('click', checkServer);
+        await checkCacheAndRedirect();
+        await checkServer();
+    </script>
+</body>
+</html>

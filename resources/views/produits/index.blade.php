@@ -230,6 +230,10 @@
                         </a>
                     @endif
                 </form>
+                <a href="{{ route('produits.import.create') }}" class="btn btn-outline-success">
+                    <i class="fas fa-file-excel me-2"></i>
+                    Importer Excel
+                </a>
                 <a href="{{ route('produits.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>
                     Ajouter un produit

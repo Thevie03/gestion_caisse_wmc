@@ -47,14 +47,13 @@ class CreateTestUser extends Command
 
         // Créer l'admin s'il n'existe pas
         if (!User::where('email', 'admin@test.com')->exists()) {
-            User::create([
+            User::createWithRole([
                 'name' => 'Admin Test',
                 'email' => 'admin@test.com',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
                 'telephone' => '+221 33 000 00 00',
-                'actif' => true
-            ]);
+                'actif' => true,
+            ], 'admin');
             $this->info('Admin créé: admin@test.com / password');
         } else {
             $this->info('Admin existe déjà');
@@ -63,15 +62,14 @@ class CreateTestUser extends Command
         // Créer un employé de test
         if (!User::where('email', 'employe@test.com')->exists()) {
             $boutique = Boutique::first();
-            User::create([
+            User::createWithRole([
                 'name' => 'Employé Test',
                 'email' => 'employe@test.com',
                 'password' => Hash::make('password'),
-                'role' => 'employe',
                 'boutique_id' => $boutique->id,
                 'telephone' => '+221 33 111 11 11',
-                'actif' => true
-            ]);
+                'actif' => true,
+            ], 'employe');
             $this->info('Employé créé: employe@test.com / password');
         } else {
             $this->info('Employé existe déjà');

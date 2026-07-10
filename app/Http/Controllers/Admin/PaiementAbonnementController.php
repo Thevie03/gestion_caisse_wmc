@@ -17,6 +17,8 @@ class PaiementAbonnementController extends Controller
 {
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $query = PaiementAbonnement::with(['abonnement.user', 'user', 'confirmePar']);
 
         if ($request->filled('statut')) {

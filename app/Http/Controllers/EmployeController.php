@@ -16,6 +16,8 @@ class EmployeController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = auth()->user();
 
         // Afficher les employés et les admins (pas les super admins)
@@ -230,17 +232,14 @@ class EmployeController extends Controller
 
         $boutiqueId = $defaultRole === 'admin' ? null : $request->boutique_id;
 
-        $userData = [
+        $newUser = User::createWithRole([
             'name' => $request->name,
             'email' => $request->email,
             'telephone' => $request->telephone,
             'password' => Hash::make($request->password),
-            'role' => $defaultRole,
             'boutique_id' => $boutiqueId,
             'actif' => true,
-        ];
-
-        $newUser = User::create($userData);
+        ], $defaultRole);
 
         // Attribuer les permissions seulement pour les employés (les admins ont toutes les permissions automatiquement)
         if ($defaultRole === 'employe' && $request->has('permissions')) {
@@ -444,7 +443,7 @@ class EmployeController extends Controller
 
         // Mettre à jour le rôle si changé
         if ($newRole !== $currentRole) {
-            $updateData['role'] = $newRole;
+            $employe->assignRole($newRole);
         }
 
         $employe->update($updateData);
@@ -534,6 +533,8 @@ class EmployeController extends Controller
      */
     public function ventes(User $employe, Request $request)
     {
+        $this->validateListingFilters($request);
+
         // Vérifier que c'est bien un employé ou un admin (pas super admin)
         if ($employe->role === 'super_admin') {
             abort(404, 'Utilisateur non trouvé.');

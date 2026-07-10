@@ -719,7 +719,8 @@ class LocalArchiveService
                     } else {
                         // Créer un nouvel utilisateur
                         $createData = Arr::except($userData, ['id']);
-                        User::create($createData);
+                        $role = $createData['role'] ?? 'employe';
+                        User::createWithRole(Arr::except($createData, ['role']), $role);
                     }
                 }
             } else {

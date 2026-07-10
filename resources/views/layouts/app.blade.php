@@ -33,6 +33,9 @@ $htmlClasses = [];
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('images/logos/logo_wmc_orange.png') }}">
 
+    {{-- PWA : manifest, meta tags iOS/Android --}}
+    @include('layouts.partials.pwa-head')
+
     <!-- Optimisation : Preconnect aux CDN pour améliorer les temps de chargement -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -610,6 +613,13 @@ $htmlClasses = [];
             });
         });
     </script>
+
+    {{-- PWA : enregistrement Service Worker + bannière d'installation --}}
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.5" defer></script>
+    @include('layouts.partials.pwa-scripts')
+
+    {{-- Mode hors connexion : IndexedDB + bootstrap (Étape 2) --}}
+    @include('layouts.partials.offline-scripts')
 </body>
 
 </html>

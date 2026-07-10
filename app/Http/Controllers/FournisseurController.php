@@ -13,6 +13,8 @@ class FournisseurController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = auth()->user();
         $boutiqueId = session('boutique_active');
 
@@ -81,7 +83,10 @@ class FournisseurController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        Fournisseur::create($request->all());
+        Fournisseur::create($request->only([
+            'nom', 'contact_nom', 'email', 'telephone', 'adresse', 'ville',
+            'code_postal', 'pays', 'site_web', 'notes',
+        ]));
 
         return redirect()->route('fournisseurs.index')
             ->with('success', 'Fournisseur créé avec succès !');
@@ -134,7 +139,10 @@ class FournisseurController extends Controller
             'actif' => 'boolean',
         ]);
 
-        $fournisseur->update($request->all());
+        $fournisseur->update($request->only([
+            'nom', 'contact_nom', 'email', 'telephone', 'adresse', 'ville',
+            'code_postal', 'pays', 'site_web', 'notes', 'actif',
+        ]));
 
         return redirect()->route('fournisseurs.index')
             ->with('success', 'Fournisseur modifié avec succès !');

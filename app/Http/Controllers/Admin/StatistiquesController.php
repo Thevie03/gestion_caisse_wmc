@@ -15,6 +15,8 @@ class StatistiquesController extends Controller
 {
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $periode = $request->get('periode', 'mois'); // jour, semaine, mois, annee
 
         // Top boutiques par CA

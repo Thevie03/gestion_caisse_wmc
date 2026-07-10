@@ -23,6 +23,8 @@ class VenteController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = auth()->user();
         $boutiqueId = session('boutique_active');
 

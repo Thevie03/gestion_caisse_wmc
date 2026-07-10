@@ -14,12 +14,14 @@
     @php
         $width = $ticketWidth ?? 80;
         $is58mm = $width == 58;
-        $fontSize = $is58mm ? 9 : 10;
-        $fontSizeSmall = $is58mm ? 8 : 9;
-        $fontSizeLarge = $is58mm ? 14 : 15;
-        $logoMaxWidth = $is58mm ? 45 : 60;
+        // Polices un peu plus grandes + marges gauche renforcée (zone non imprimable des rouleaux 58/80 mm)
+        $fontSize = $is58mm ? 10 : 11;
+        $fontSizeSmall = $is58mm ? 9 : 10;
+        $fontSizeLarge = $is58mm ? 15 : 16;
+        $logoMaxWidth = $is58mm ? 42 : 56;
         $logoMaxHeight = $is58mm ? 22 : 30;
-        $padding = $is58mm ? '1.5mm 2mm' : '1.5mm 2mm';
+        // top right bottom left — gauche plus large pour éviter la coupe du début des lignes
+        $padding = $is58mm ? '2mm 3mm 2mm 6mm' : '2mm 4mm 2mm 5mm';
     @endphp
     <style>
         * {
@@ -41,10 +43,11 @@
         }
 
         body {
-            font-family: 'Arial', 'DejaVu Sans', sans-serif;
+            font-family: 'Arial', 'Helvetica Neue', Helvetica, 'DejaVu Sans', sans-serif;
             font-size: {{ $fontSize }}px;
-            line-height: 1.4;
+            line-height: 1.45;
             color: #000;
+            font-weight: 600;
             background: white;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -85,15 +88,15 @@
             }
 
             .facture {
-                /* Taille réelle en mm pour l'impression */
                 width: {{ $width }}mm !important;
                 max-width: {{ $width }}mm !important;
-                min-width: {{ $width }}mm !important;
+                min-width: 0 !important;
                 padding: {{ $padding }} !important;
                 box-shadow: none !important;
                 border: none !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
                 font-size: {{ $fontSize }}px !important;
+                overflow: visible !important;
             }
         }
 
@@ -300,7 +303,7 @@
 
         .footer {
             text-align: center;
-            font-size: {{ $is58mm ? '7px' : '9px' }}px;
+            font-size: {{ $is58mm ? '8px' : '10px' }}px;
             color: #000;
             border-top: 2px solid #000;
             padding-top: {{ $is58mm ? '8px' : '12px' }};
@@ -320,46 +323,36 @@
         @media print {
             @page {
                 size: {{ $width }}mm auto;
-                margin: 0 auto;
-                padding: 0;
+                margin: 0;
             }
 
             html,
             body {
-                width: 100%;
-                margin: 0 auto;
+                width: {{ $width }}mm;
+                margin: 0;
                 padding: 0;
-                display: flex;
-                justify-content: center;
-            }
-
-            * {
-                box-sizing: border-box;
             }
 
             body {
-                margin: 0 !important;
-                padding: 0 !important;
-                width: 100% !important;
-                display: flex !important;
-                justify-content: center !important;
-                align-items: flex-start !important;
+                display: block !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             .facture {
                 width: {{ $width }}mm !important;
                 max-width: {{ $width }}mm !important;
-                min-width: {{ $width }}mm !important;
-                margin: 0 auto !important;
+                min-width: 0 !important;
+                margin: 0 !important;
                 padding: {{ $padding }} !important;
                 word-wrap: break-word !important;
                 overflow-wrap: break-word !important;
                 word-break: break-word !important;
-                overflow: hidden !important;
+                overflow: visible !important;
             }
 
-            * {
-                max-width: 100% !important;
+            .facture,
+            .facture * {
                 box-sizing: border-box !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -600,7 +593,7 @@
             <div>GestionCaisse - Système de gestion de caisse</div>
             <div>Facture générée le {{ now()->format('d/m/Y à H:i:s') }}</div>
             <div>Pour toute réclamation, conserver cette facture</div>
-            <div style="margin-top: 8px; font-size: 8px;">Protection de données personnelles</div>
+            <div style="margin-top: 8px; font-size: {{ $is58mm ? '8px' : '9px' }};">Protection de données personnelles</div>
         </div>
     </div>
 

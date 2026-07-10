@@ -23,6 +23,8 @@ class UserManagementController extends Controller
 
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $merchantRoles = ['employe']; // Les commerçants utilisent le rôle 'employe'
 
         $usersQuery = User::query()
@@ -63,15 +65,13 @@ class UserManagementController extends Controller
         $data = $request->validated();
 
         $user = DB::transaction(function () use ($data) {
-            $user = User::create([
+            $user = User::createWithRole([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'telephone' => $data['telephone'],
                 'password' => Hash::make($data['password']),
-                'role' => User::ROLE_ADMIN, // Les propriétaires de boutique sont des administrateurs
                 'actif' => true,
-                'tenant_key' => Str::uuid(),
-            ]);
+            ], User::ROLE_ADMIN, ['tenant_key' => Str::uuid()]);
 
             $boutique = Boutique::create([
                 'nom' => $data['boutique_nom'],

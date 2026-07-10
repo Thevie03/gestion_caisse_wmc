@@ -178,26 +178,10 @@
                                         @endif
                                     </h6>
                                     <p class="mb-1">
-                                        @if ($notification->module === 'stock')
-                                            @php
-                                                $message = $notification->message;
-                                                // Colorer 'sortie' en rouge
-                                                $message = preg_replace(
-                                                    "/'sortie'/",
-                                                    "<span class='text-danger fw-bold'>'sortie'</span>",
-                                                    $message,
-                                                );
-                                                // Colorer 'entree' en vert
-                                                $message = preg_replace(
-                                                    "/'entree'/",
-                                                    "<span class='text-success fw-bold'>'entree'</span>",
-                                                    $message,
-                                                );
-                                            @endphp
-                                            {!! $message !!}
-                                        @else
-                                            {{ $notification->message }}
-                                        @endif
+                                        <x-notification-message
+                                            :message="$notification->message"
+                                            :module="$notification->module"
+                                        />
                                     </p>
                                     <small class="text-muted">
                                         <i class="fas fa-clock me-1"></i>

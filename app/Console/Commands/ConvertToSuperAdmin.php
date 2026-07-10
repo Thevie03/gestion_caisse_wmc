@@ -44,9 +44,7 @@ class ConvertToSuperAdmin extends Command
 
         try {
             $oldRole = $user->role;
-            $user->update([
-                'role' => 'super_admin'
-            ]);
+            $user->assignRole('super_admin');
 
             $this->info("✅ L'utilisateur {$email} a été converti en super administrateur.");
             $this->info("   Ancien rôle: {$oldRole}");

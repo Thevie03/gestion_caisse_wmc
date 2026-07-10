@@ -15,6 +15,8 @@ class ContratController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $query = Contrat::with(['boutique', 'createur']);
 
         // Filtres

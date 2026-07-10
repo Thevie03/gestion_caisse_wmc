@@ -34,6 +34,11 @@
                 </div>
             </div>
 
+            <!-- Statut connexion mobile -->
+            <div class="col-auto d-md-none ms-auto" id="wmc-offline-status-mobile" title="État de la connexion">
+                <span class="wmc-offline-status__dot" aria-hidden="true">🟢</span>
+            </div>
+
             <!-- Logo Desktop -->
             <div class="col-auto d-none d-md-block">
                 <div class="d-inline-block">
@@ -128,6 +133,9 @@
                             @endif
                         @endauth
 
+                        {{-- Indicateur connexion PWA / mode offline --}}
+                        @include('layouts.partials.offline-status')
+
                         <!-- Notifications -->
                         <div class="dropdown me-2 topbar-notification">
                             <button class="btn btn-link text-dark position-relative topbar-notification-btn" type="button"
@@ -198,24 +206,11 @@
                                                 <div class="flex-grow-1">
                                                     <div class="fw-bold small">{{ $notification->titre }}</div>
                                                     <div class="text-muted small">
-                                                        @if ($notification->module === 'stock')
-                                                            @php
-                                                                $message = Str::limit($notification->message, 50);
-                                                                $message = preg_replace(
-                                                                    "/'sortie'/",
-                                                                    "<span class='text-danger fw-bold'>'sortie'</span>",
-                                                                    $message,
-                                                                );
-                                                                $message = preg_replace(
-                                                                    "/'entree'/",
-                                                                    "<span class='text-success fw-bold'>'entree'</span>",
-                                                                    $message,
-                                                                );
-                                                            @endphp
-                                                            {!! $message !!}
-                                                        @else
-                                                            {{ Str::limit($notification->message, 50) }}
-                                                        @endif
+                                                        <x-notification-message
+                                                            :message="$notification->message"
+                                                            :module="$notification->module"
+                                                            :limit="50"
+                                                        />
                                                     </div>
                                                     <div class="text-muted" style="font-size: 0.75rem;">
                                                         {{ $notification->created_at->diffForHumans() }}

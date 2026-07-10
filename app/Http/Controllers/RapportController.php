@@ -117,6 +117,10 @@ class RapportController extends Controller
      */
     public function stock(Request $request)
     {
+        $this->validateListingFilters($request, [
+            'stock_faible' => 'nullable|in:0,1,true,false',
+        ]);
+
         $boutiqueActive = session('boutique_active');
         $user = auth()->user();
 

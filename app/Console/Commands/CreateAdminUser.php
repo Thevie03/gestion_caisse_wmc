@@ -40,15 +40,14 @@ class CreateAdminUser extends Command
         }
 
         // Créer l'utilisateur admin
-        $admin = User::create([
+        $admin = User::createWithRole([
             'name' => 'Administrateur',
             'email' => $email,
             'password' => Hash::make($password),
-            'role' => 'admin',
             'boutique_id' => null,
             'telephone' => '0000000000',
             'actif' => true,
-        ]);
+        ], 'admin');
 
         $this->info("Utilisateur admin créé avec succès !");
         $this->info("Email: {$email}");

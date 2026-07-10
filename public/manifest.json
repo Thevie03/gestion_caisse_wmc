@@ -1,0 +1,66 @@
+{
+    "id": "/",
+    "name": "GestionCaisse WMC",
+    "short_name": "WMC Caisse",
+    "description": "Application de gestion de caisse WMC — ventes, stock, clients et paiements.",
+    "lang": "fr",
+    "dir": "ltr",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "display_override": ["standalone", "minimal-ui", "browser"],
+    "orientation": "any",
+    "background_color": "#111827",
+    "theme_color": "#F59E0B",
+    "categories": ["business", "finance", "productivity"],
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "/images/logos/logo_wmc_orange.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/logos/logo_wmc_orange.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/logos/logo_wmc_orange.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Point de vente",
+            "short_name": "POS",
+            "description": "Ouvrir l'interface caisse",
+            "url": "/ventes/pos/interface",
+            "icons": [
+                {
+                    "src": "/images/logos/logo_wmc_orange.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                }
+            ]
+        },
+        {
+            "name": "Tableau de bord",
+            "short_name": "Dashboard",
+            "description": "Voir le tableau de bord",
+            "url": "/dashboard",
+            "icons": [
+                {
+                    "src": "/images/logos/logo_wmc_orange.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                }
+            ]
+        }
+    ]
+}

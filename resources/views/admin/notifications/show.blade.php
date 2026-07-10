@@ -49,26 +49,10 @@
                         <div class="mb-4">
                             <h5 class="fw-semibold mb-2">Message</h5>
                             <p class="text-muted">
-                                @if ($notification->module === 'stock')
-                                    @php
-                                        $message = $notification->message;
-                                        // Colorer 'sortie' en rouge
-                                        $message = preg_replace(
-                                            "/'sortie'/",
-                                            "<span class='text-danger fw-bold'>'sortie'</span>",
-                                            $message,
-                                        );
-                                        // Colorer 'entree' en vert
-                                        $message = preg_replace(
-                                            "/'entree'/",
-                                            "<span class='text-success fw-bold'>'entree'</span>",
-                                            $message,
-                                        );
-                                    @endphp
-                                    {!! $message !!}
-                                @else
-                                    {{ $notification->message }}
-                                @endif
+                                <x-notification-message
+                                    :message="$notification->message"
+                                    :module="$notification->module"
+                                />
                             </p>
                         </div>
 

@@ -41,9 +41,7 @@ class CreateSuperAdmin extends Command
                 return Command::SUCCESS;
             } else {
                 // Convertir l'utilisateur existant en super admin
-                $user->update([
-                    'role' => 'super_admin'
-                ]);
+                $user->assignRole('super_admin');
                 $this->info("L'utilisateur {$email} a été converti en super administrateur.");
                 return Command::SUCCESS;
             }
@@ -52,15 +50,14 @@ class CreateSuperAdmin extends Command
         // Vérifier si la colonne role supporte super_admin
         try {
             // Créer l'utilisateur super admin
-            $superAdmin = User::create([
+            $superAdmin = User::createWithRole([
                 'name' => $name,
                 'email' => $email,
                 'password' => Hash::make($password),
-                'role' => 'super_admin',
                 'boutique_id' => null,
                 'telephone' => '+221 33 000 00 00',
                 'actif' => true,
-            ]);
+            ], 'super_admin');
 
             $this->info("✅ Super administrateur créé avec succès !");
             $this->info("Email: {$email}");

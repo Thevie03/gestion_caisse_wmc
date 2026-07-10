@@ -16,6 +16,8 @@ class StockController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = auth()->user();
         $boutiqueId = session('boutique_active');
 
@@ -252,6 +254,10 @@ class StockController extends Controller
      */
     public function historique(Request $request)
     {
+        $this->validateListingFilters($request, [
+            'type' => 'nullable|in:entree,sortie,ajustement,transfert',
+        ]);
+
         $user = auth()->user();
         $boutiqueId = session('boutique_active');
 

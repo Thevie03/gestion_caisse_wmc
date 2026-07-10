@@ -16,6 +16,8 @@ class SupportController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = Auth::user();
 
         // Seuls les super admins peuvent accéder (pas les propriétaires de boutique)

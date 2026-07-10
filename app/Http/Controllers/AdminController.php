@@ -15,6 +15,8 @@ class AdminController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $query = User::with('boutique')->where('role', 'admin');
 
         // Filtres
@@ -77,15 +79,14 @@ class AdminController extends Controller
         $boutiqueId = $request->filled('boutique_id') ? $request->boutique_id : null;
         $actif = $request->has('actif') ? $request->boolean('actif') : true;
 
-        $admin = User::create([
+        $admin = User::createWithRole([
             'name' => $request->name,
             'email' => $request->email,
             'telephone' => $request->telephone,
             'password' => Hash::make($request->password),
-            'role' => 'admin', // Les admins ont automatiquement toutes les permissions via isAdmin()
             'boutique_id' => $boutiqueId,
             'actif' => $actif,
-        ]);
+        ], 'admin');
 
         // Note: Les admins ont automatiquement toutes les permissions
         // car isAdmin() retourne true pour role='admin', et hasPermission()/canAccess()

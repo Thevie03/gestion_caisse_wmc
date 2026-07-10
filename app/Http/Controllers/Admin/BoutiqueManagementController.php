@@ -21,6 +21,8 @@ class BoutiqueManagementController extends Controller
 
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $query = Boutique::with('owner')->withSum('ventes as chiffre_affaires', 'total_final');
 
         if ($request->filled('search')) {
@@ -130,7 +132,11 @@ class BoutiqueManagementController extends Controller
 
         $request->validate($rules);
 
-        $data = $request->all();
+        $data = $request->only([
+            'nom', 'adresse', 'telephone', 'email', 'devise', 'owner_type',
+            'owner_id', 'owner_name', 'owner_telephone', 'owner_email', 'owner_password',
+            'type_abonnement', 'montant_abonnement',
+        ]);
 
         if ($request->hasFile('logo')) {
             $logo = $request->file('logo');
@@ -154,22 +160,20 @@ class BoutiqueManagementController extends Controller
                 $owner = User::findOrFail($data['owner_id']);
                 // S'assurer que le propriétaire a le rôle admin
                 if ($owner->role !== User::ROLE_ADMIN && $owner->role !== 'super_admin') {
-                    $owner->update(['role' => User::ROLE_ADMIN]);
+                    $owner->assignRole(User::ROLE_ADMIN);
                 }
                 $generatedPassword = null;
             } else {
                 // Créer un nouvel utilisateur
                 $plainPassword = $data['owner_password'] ?? Str::random(10);
 
-                $owner = User::create([
+                $owner = User::createWithRole([
                     'name' => $data['owner_name'],
                     'email' => $data['owner_email'],
                     'telephone' => $data['owner_telephone'],
                     'password' => Hash::make($plainPassword),
-                    'role' => User::ROLE_ADMIN, // Les propriétaires de boutique sont des administrateurs
                     'actif' => true,
-                    'tenant_key' => Str::uuid(),
-                ]);
+                ], User::ROLE_ADMIN, ['tenant_key' => Str::uuid()]);
 
                 $generatedPassword = $plainPassword;
             }
@@ -269,7 +273,10 @@ class BoutiqueManagementController extends Controller
             'owner_password' => 'nullable|string|min:8',
         ]);
 
-        $data = $request->all();
+        $data = $request->only([
+            'nom', 'adresse', 'telephone', 'email', 'devise', 'actif',
+            'owner_name', 'owner_email', 'owner_telephone', 'owner_password',
+        ]);
 
         if ($request->hasFile('logo')) {
             // Sécurité : Valider le chemin du fichier avant suppression
@@ -327,8 +334,8 @@ class BoutiqueManagementController extends Controller
                 'name' => $request->owner_name,
                 'email' => $request->owner_email,
                 'telephone' => $request->owner_telephone,
-                'role' => User::ROLE_ADMIN, // S'assurer que le propriétaire a toujours le rôle admin
             ]);
+            $boutique->owner->assignRole(User::ROLE_ADMIN);
 
             if ($request->filled('owner_password')) {
                 $boutique->owner->update([

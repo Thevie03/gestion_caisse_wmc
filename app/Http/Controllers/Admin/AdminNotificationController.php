@@ -14,6 +14,8 @@ class AdminNotificationController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = auth()->user();
 
         // Pour le Super Admin, afficher toutes les notifications (globales + personnelles)

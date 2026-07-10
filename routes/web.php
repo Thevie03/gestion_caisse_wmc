@@ -23,82 +23,10 @@ use Illuminate\Support\Facades\Route;
 // Landing page (publique, redirige vers dashboard si déjà connecté)
 Route::get('/', [App\Http\Controllers\WelcomeController::class, 'index'])->name('welcome')->middleware('guest');
 
-// Route pour rafraîchir le token CSRF
+// Route pour rafraîchir le token CSRF (utilisateurs authentifiés uniquement)
 Route::get('/csrf-token', function () {
     return response()->json(['csrf_token' => csrf_token()]);
-})->middleware('web');
-
-// Routes de test - DÉSACTIVÉES POUR LA SÉCURITÉ
-// À supprimer complètement en production ou protéger avec authentification
-if (config('app.debug')) {
-    Route::middleware(['auth', 'admin'])->group(function () {
-        Route::get('/test-pdf-simple', function() {
-    try {
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('rapports.pdf.ventes', [
-            'ventes' => collect(),
-            'stats' => [
-                'total_ventes' => 0,
-                'chiffre_affaires' => 0,
-                'moyenne_vente' => 0,
-                'meilleur_jour' => 0,
-                'produits_vendus' => collect(),
-                'ventes_par_mode_paiement' => collect(),
-            ],
-            'dateDebut' => '2025-01-01',
-            'dateFin' => '2025-01-31',
-            'typeRapport' => 'mensuel'
-        ])->setPaper('a4', 'landscape');
-
-        return $pdf->download('test_simple.pdf');
-
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Erreur test PDF', [
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]);
-                return response()->json([
-                    'error' => config('app.debug') ? $e->getMessage() : 'Une erreur est survenue'
-                ], 500);
-            }
-        });
-
-        Route::get('/test-ventes-real', function() {
-    try {
-        $ventes = \App\Models\Vente::with(['user', 'boutique'])
-            ->limit(3)
-            ->get();
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('rapports.pdf.ventes', [
-            'ventes' => $ventes,
-            'stats' => [
-                'total_ventes' => $ventes->count(),
-                'chiffre_affaires' => $ventes->sum('total_final'),
-                'moyenne_vente' => $ventes->count() > 0 ? $ventes->avg('total_final') : 0,
-                'meilleur_jour' => $ventes->count() > 0 ? $ventes->max('total_final') : 0,
-                'produits_vendus' => collect(),
-                'ventes_par_mode_paiement' => collect(),
-            ],
-            'dateDebut' => '2025-01-01',
-            'dateFin' => '2025-01-31',
-            'typeRapport' => 'mensuel'
-        ])->setPaper('a4', 'landscape');
-
-        return $pdf->download('test_ventes_real.pdf');
-
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Erreur test ventes', [
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]);
-                return response()->json([
-                    'error' => config('app.debug') ? $e->getMessage() : 'Une erreur est survenue'
-                ], 500);
-            }
-        });
-    });
-}
+})->middleware(['web', 'auth', 'throttle:30,1']);
 
 // Routes protégées par authentification
 Route::middleware(['auth', 'verified', 'theme', 'subscription', 'tenant'])->group(function () {
@@ -199,6 +127,20 @@ Route::middleware(['auth', 'verified', 'theme', 'subscription', 'tenant'])->grou
         ->middleware('auth')
         ->name('api.find-product-by-barcode');
 
+    // API PWA — bootstrap des données pour le mode hors connexion
+    Route::prefix('api/offline')->name('api.offline.')->group(function () {
+        Route::get('/bootstrap', [App\Http\Controllers\Api\OfflineBootstrapController::class, 'bootstrap'])
+            ->name('bootstrap');
+        Route::get('/ping', [App\Http\Controllers\Api\OfflineBootstrapController::class, 'ping'])
+            ->name('ping');
+        Route::post('/sync', [App\Http\Controllers\Api\OfflineSyncController::class, 'sync'])
+            ->name('sync');
+        Route::post('/ventes', [App\Http\Controllers\Api\OfflineSyncController::class, 'syncVente'])
+            ->name('ventes.sync');
+        Route::post('/clients', [App\Http\Controllers\Api\OfflineSyncController::class, 'syncClient'])
+            ->name('clients.sync');
+    });
+
     // Routes pour les paiements partiels
     Route::prefix('paiements')->name('paiements.')->group(function () {
         Route::post('/{vente}', [App\Http\Controllers\PaiementVenteController::class, 'store'])->name('store');
@@ -207,6 +149,10 @@ Route::middleware(['auth', 'verified', 'theme', 'subscription', 'tenant'])->grou
 
     Route::prefix('produits')->name('produits.')->group(function () {
         Route::get('/', [App\Http\Controllers\ProduitController::class, 'index'])->name('index');
+        Route::get('/import', [App\Http\Controllers\ProduitImportController::class, 'create'])->name('import.create');
+        Route::get('/import/modele', [App\Http\Controllers\ProduitImportController::class, 'downloadTemplate'])->name('import.template');
+        Route::get('/import/modele-csv', [App\Http\Controllers\ProduitImportController::class, 'downloadCsvTemplate'])->name('import.template.csv');
+        Route::post('/import', [App\Http\Controllers\ProduitImportController::class, 'store'])->name('import.store');
         Route::get('/create', [App\Http\Controllers\ProduitController::class, 'create'])->name('create');
         Route::post('/', [App\Http\Controllers\ProduitController::class, 'store'])->name('store');
         // Routes spécifiques AVANT les routes avec paramètre générique

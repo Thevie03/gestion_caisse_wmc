@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Arr;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -25,16 +26,51 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
         'boutique_id',
         'telephone',
         'actif',
-        'tenant_key',
-        'subscription_status',
-        'subscription_expires_at',
-        'trial_ends_at',
         'last_login_at',
     ];
+
+    /**
+     * Créer un utilisateur avec un rôle explicite (hors mass assignment).
+     */
+    public static function createWithRole(array $attributes, string $role, array $extra = []): self
+    {
+        $protectedKeys = ['role', 'tenant_key', 'subscription_status', 'subscription_expires_at', 'trial_ends_at'];
+        $extra = array_merge(
+            array_intersect_key($attributes, array_flip($protectedKeys)),
+            $extra
+        );
+        $attributes = Arr::except($attributes, $protectedKeys);
+
+        $user = new static($attributes);
+        $user->role = $role;
+        foreach ($extra as $key => $value) {
+            if ($value !== null) {
+                $user->{$key} = $value;
+            }
+        }
+        $user->save();
+
+        return $user;
+    }
+
+    /**
+     * Attribuer un rôle de manière contrôlée.
+     */
+    public function assignRole(string $role): self
+    {
+        $allowed = ['admin', 'employe', 'super_admin'];
+        if (! in_array($role, $allowed, true)) {
+            throw new \InvalidArgumentException("Rôle invalide : {$role}");
+        }
+
+        $this->role = $role;
+        $this->save();
+
+        return $this;
+    }
 
     /**
      * The attributes that should be hidden for serialization.

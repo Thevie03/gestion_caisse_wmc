@@ -1,11 +1,33 @@
-# Déploiement et mises à jour — LWS / GitHub (ERP SOGESTRA)
+# Déploiement et mises à jour — LWS + GitHub (Gestion Caisse WMC)
 
-Ce document décrit comment mettre à jour l’application en production sur **LWS** à partir du dépôt **GitHub**, sans perdre les données existantes (base MySQL, `.env`, fichiers dans `storage`).
+Ce guide explique comment **relier ton site déjà en ligne (LWS)** à **GitHub** et comment **mettre à jour** le code en production sans perdre la base MySQL, le fichier **`.env`** ni le dossier **`storage/`**.
 
-**Dépôt GitHub :** `https://github.com/Thevie03/Erp-Sogestraci.git`  
-**Dossier application sur le serveur :** `~/public_html/crm`  
-**Sous-domaine (exemple) :** `erp.sogestraci.com`  
-**Racine web du sous-domaine (Laravel) :** `public_html/crm/public` — **obligatoire** (dossier `public`, pas seulement `crm`).
+---
+
+## En deux mots : comment c’est « lié »
+
+Il n’y a **pas de bouton dans LWS** qui connecte GitHub automatiquement. Le lien, c’est **Git** :
+
+| Où | Ce que tu fais |
+|----|----------------|
+| **Ton PC** | Tu enregistres les changements et tu les **envoies** sur GitHub : `git push`. |
+| **GitHub** | Garde une **copie du code** (référence pour tout le monde). |
+| **Serveur LWS** | Tu **télécharges** cette copie dans le dossier du site : `git pull`. |
+
+Donc pour chaque mise à jour : **PC → `push` → GitHub → sur le serveur → `pull`**.
+
+Les données (MySQL, `.env`, fichiers dans `storage`) **restent sur le serveur** ; Git ne les remplace pas si tu ne les commits pas.
+
+---
+
+## À adapter chez toi (note ces valeurs)
+
+| Élément | Valeur actuelle du projet (à modifier si besoin) |
+|--------|---------------------------------------------------|
+| **Dépôt GitHub** | `https://github.com/Thevie03/gestion_caisse_wmc.git` |
+| **Branche** | `main` (si ton dépôt utilise `master`, remplace `main` par `master` partout dans ce doc) |
+| **Dossier Laravel sur le serveur** | Exemple : `~/public_html/crm` — **remplace par le vrai chemin** de ton app (ex. `~/public_html/gestion-caisse`). |
+| **Racine web (cPanel / sous-domaine)** | Doit pointer vers le dossier **`public`** de Laravel, ex. `public_html/crm/public` — **obligatoire**, pas le dossier parent seul. |
 
 ---
 
@@ -14,70 +36,123 @@ Ce document décrit comment mettre à jour l’application en production sur **L
 | Élément | Rôle |
 |--------|------|
 | **Git / GitHub** | Met à jour le **code** (PHP, vues, migrations, etc.). |
-| **Base MySQL** | Reste sur le serveur ; les migrations **ajoutent** tables/colonnes, elles ne remplacent pas toute la base. |
-| **`.env`** | Reste sur le serveur (ne pas le commiter sur GitHub). À copier depuis l’ancienne install lors du premier déploiement Git. |
-| **`storage/`** | Uploads, logs, cache : à préserver ; copier depuis l’ancienne app si besoin. |
-| **`public/build/`** | Généré par **Vite** ; il est dans **`.gitignore`** → **pas** sur GitHub. Il faut le créer en local ou sur le serveur après chaque changement front. |
+| **Base MySQL** | Reste sur le serveur ; les migrations **ajoutent** tables ou colonnes, elles ne vident pas la base. |
+| **`.env`** | Uniquement sur le serveur (et en local sur ton PC). **Ne pas** le mettre sur GitHub. |
+| **`storage/`** | Uploads, logs, cache : à **garder** sur le serveur ; à recopier depuis l’ancienne install si tu recrées le dossier. |
+| **`public/build/`** | Généré par **Vite**, souvent **hors Git** (`.gitignore`) → à regénérer ou uploader après changement du front. |
 
 ---
 
-## Authentification GitHub (HTTPS)
+## Authentification GitHub sur le serveur (HTTPS)
 
-GitHub n’accepte plus le mot de passe du compte pour `git clone` / `git pull`.
+Pour `git clone` ou `git pull`, GitHub **n’accepte plus** le mot de passe du compte.
 
-- **Username :** votre identifiant GitHub (ex. `Thevie03`).
-- **Password :** un **Personal Access Token** (PAT), pas le mot de passe du site.
+- **Nom d’utilisateur :** ton identifiant GitHub (ex. `Thevie03`).
+- **Mot de passe demandé par Git :** un **Personal Access Token** (PAT), créé sur GitHub → *Settings* → *Developer settings* → *Personal access tokens*.
 
-Token **fine-grained** : accès au dépôt `Erp-Sogestraci` + permission **Contents : Read** (minimum pour pull).  
-Token **classic** : cocher **`repo`** si le dépôt est privé.
+Pour un dépôt **privé** : token **classic** avec la case **`repo`**, ou token **fine-grained** avec accès au dépôt **`gestion_caisse_wmc`** et permission **Contents : Read** (minimum pour `pull`).
 
-### Mémoriser le token (optionnel)
+### Mémoriser le token (optionnel, sur le serveur)
 
 ```bash
 git config --global credential.helper store
 ```
 
-Un premier `git pull` où vous saisissez user + token ; les suivants peuvent ne plus redemander.
+Au premier `git pull`, saisis identifiant + token ; les prochains `pull` pourront ne plus redemander.
 
 ---
 
-## Première mise en place (résumé)
+## Cas A — Tu avais déjà le site en ligne **sans** Git (FTP, zip, etc.)
 
-1. Cloner dans `~/public_html/crm` depuis GitHub.
-2. Copier **`.env`** et **`storage/`** depuis l’ancienne app (`~/public_html/Erp`) vers `crm`.
-3. Dans `crm` : `composer install`, `php artisan migrate --force`, `php artisan storage:link`, `php artisan optimize`.
-4. cPanel → sous-domaine → **répertoire racine** = **`crm/public`** (pas `crm` seul).
-5. Corriger les permissions : `bash fix_permissions_simple.sh` (voir plus bas).
-6. **Assets Vite :** `npm run build` en local puis upload du dossier **`public/build`** vers `crm/public/build` (ou `npm run build` sur le serveur si Node est disponible).
+Objectif : le dossier sur LWS devient une copie pilotée par GitHub.
+
+1. **Sauvegarde** `.env` et tout le dossier `storage` (copie sur ton PC ou autre dossier sur le serveur).
+2. Sur le serveur (SSH), va dans `public_html` (ou équivalent).
+3. **Soit** tu renommes l’ancien dossier (ex. `crm` → `crm_ancien`), **soit** tu clones dans un **nouveau** dossier (ex. `crm`).
+4. Clone le dépôt :
+
+   ```bash
+   git clone https://github.com/Thevie03/gestion_caisse_wmc.git crm
+   cd crm
+   ```
+
+5. Recolle **`.env`** et **`storage/`** (et `storage/app/public` si besoin) depuis la sauvegarde.
+6. Puis enchaîne comme en **« Première installation après clone »** ci-dessous.
 
 ---
 
-## Mises à jour courantes (routine)
+## Cas B — Le dossier sur le serveur est **déjà** un dépôt Git
 
-### Étape 1 — Sur votre PC
+Vérifie que le dépôt distant est **le tien** :
 
 ```bash
-git add .
-git commit -m "Description de la mise à jour"
-git push origin main
+cd ~/public_html/crm
+git remote -v
 ```
 
-Remplacez `main` par le nom de votre branche si différent.
-
-### Étape 2 — Si vous avez modifié le front (JS, CSS, `@vite`)
-
-En local, à la racine du projet :
+Tu dois voir `https://github.com/Thevie03/gestion_caisse_wmc.git` pour `origin`.  
+Si l’URL est fausse (ex. autre compte GitHub) :
 
 ```bash
+git remote set-url origin https://github.com/Thevie03/gestion_caisse_wmc.git
+git remote -v
+```
+
+---
+
+## Première installation après clone (une fois)
+
+À la racine Laravel (là où se trouve `artisan`) :
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan storage:link
+php artisan optimize
+```
+
+Dans **cPanel** : sous-domaine / domaine → **document root** = **`…/ton_dossier/public`** (pas seulement `ton_dossier`).
+
+**Permissions** (si tu as le script dans le projet) :
+
+```bash
+bash fix_permissions_simple.sh
+```
+
+**Front (Vite)** : en local (PowerShell, à la racine du projet) :
+
+```powershell
 npm ci
 npm run build
 ```
 
-Puis **uploader** tout le dossier **`public/build`** sur le serveur dans :
+Puis envoie le dossier **`public/build`** sur le serveur dans **`crm/public/build/`** (adapte `crm` à ton chemin), **sauf** si tu lances `npm run build` directement sur le serveur (Node requis).
 
-`public_html/crm/public/build/`
+---
 
-*(Tant que `public/build` est ignoré par Git, cette étape reste nécessaire sauf build sur le serveur.)*
+## Mises à jour courantes (à chaque changement de code)
+
+### Étape 1 — Sur ton PC (Windows / PowerShell)
+
+```powershell
+cd "C:\Users\WMC\Desktop\APP GCAISSE WMC 2026\APP GCAISSE WMC 2026"
+git add .
+git commit -m "Description courte de la mise à jour"
+git push origin main
+```
+
+*(Adapte le chemin et remplace `main` si ta branche a un autre nom.)*
+
+### Étape 2 — Front modifié ? (JS, CSS, `@vite`, Blade avec assets)
+
+En local :
+
+```powershell
+npm ci
+npm run build
+```
+
+Puis **transfère** tout le dossier **`public\build`** vers le serveur : **`ton_dossier/public/build/`**.
 
 ### Étape 3 — Sur le serveur (SSH)
 
@@ -90,47 +165,15 @@ php artisan optimize:clear
 php artisan optimize
 ```
 
-### Étape 4 — Permissions (si besoin)
-
-À la racine Laravel (`crm`, là où se trouve `artisan` et `fix_permissions_simple.sh`) :
+### Étape 4 — Si le site affiche des erreurs de droits
 
 ```bash
 bash fix_permissions_simple.sh
 ```
 
-Ce script applique notamment :
-
-- dossiers **755**, fichiers **644** (hors exclusions du script) ;
-- **`storage/`** et **`bootstrap/cache/`** en **775** ;
-- **`artisan`** en **755**.
-
 ---
 
-## Dépannage rapide
-
-### Erreur 403 Forbidden
-
-- Vérifier que le sous-domaine pointe vers **`…/crm/public`**, pas **`…/crm`**.
-- Vérifier la présence de **`crm/public/index.php`** et **`.htaccess`**.
-- Vérifier les droits (script ci-dessus).
-
-### Erreur « Vite manifest not found » (`public/build/manifest.json`)
-
-Le build front est absent. Lancer **`npm run build`** en local (ou sur le serveur) et déployer le dossier **`public/build`**.
-
-### Erreur SQL « colonne inconnue » après mise à jour
-
-Lancer les migrations :
-
-```bash
-php artisan migrate --force
-```
-
----
-
-## Commandes utiles (copier-coller)
-
-Mise à jour serveur complète :
+## Bloc copier-coller : mise à jour serveur complète
 
 ```bash
 cd ~/public_html/crm
@@ -142,23 +185,39 @@ php artisan optimize
 bash fix_permissions_simple.sh
 ```
 
-Build front en local (Windows, PowerShell, dans le dossier du projet) :
+*(Change `~/public_html/crm` si ton installation est ailleurs.)*
 
-```powershell
-npm ci
-npm run build
+---
+
+## Dépannage rapide
+
+### Erreur **403** sur `git push` (PC)
+
+Souvent : le `remote` pointe vers le **mauvais** dépôt (autre organisation / autre utilisateur). Vérifie avec `git remote -v` et corrige avec `git remote set-url origin https://github.com/Thevie03/gestion_caisse_wmc.git`.
+
+### **403 Forbidden** dans le navigateur
+
+- Le domaine doit pointer vers **`…/public`**, pas le dossier parent seul.
+- Présence de **`public/index.php`** et **`.htaccess`**.
+- Droits fichiers (script `fix_permissions_simple.sh`).
+
+### **Vite manifest not found**
+
+Build manquant : `npm run build` puis déployer **`public/build`**.
+
+### Colonne SQL inconnue après mise à jour
+
+```bash
+php artisan migrate --force
 ```
-
-Puis transférer **`public\build`** vers le serveur : **`crm/public/build/`**.
 
 ---
 
 ## Sécurité
 
-- Ne **jamais** coller un token GitHub dans un chat, un ticket ou une URL publique. En cas de fuite : **révoquer** le token sur GitHub et en créer un nouveau.
-- Ne **jamais** committer le fichier **`.env`** sur GitHub.
+- Ne **jamais** partager un token GitHub ; en cas de fuite : le **révoquer** sur GitHub et en créer un autre.
+- Ne **jamais** committer **`.env`** sur GitHub.
 
 ---
 
-*Document généré pour faciliter les déploiements LWS ; adaptez les chemins (`main` / `master`, nom du dossier) si votre hébergement diffère.*
-    
+*Adapte les chemins (`crm`, `main` / `master`) à ton hébergement réel.*

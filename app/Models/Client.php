@@ -16,7 +16,7 @@ class Client extends Model
     protected $fillable = [
         'nom', 'prenom', 'email', 'telephone', 'adresse', 'ville',
         'code_postal', 'pays', 'date_naissance', 'sexe', 'notes',
-        'solde_points', 'actif', 'user_id', 'boutique_id'
+        'solde_points', 'actif', 'user_id', 'boutique_id', 'offline_uuid'
     ];
 
     protected $casts = [

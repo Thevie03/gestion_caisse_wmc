@@ -10,6 +10,12 @@
 
     <title>{{ config('app.name', 'Laravel') }}</title>
 
+    {{-- PWA : manifest, meta tags iOS/Android --}}
+    @include('layouts.partials.pwa-head')
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logos/logo_wmc_orange.png') }}">
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -96,6 +102,10 @@
 
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" crossorigin="anonymous"></script>
+
+    {{-- PWA : enregistrement Service Worker --}}
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.5" defer></script>
+    @include('layouts.partials.offline-scripts')
 </body>
 
 </html>

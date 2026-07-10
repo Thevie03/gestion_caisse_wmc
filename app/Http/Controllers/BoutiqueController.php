@@ -142,7 +142,12 @@ class BoutiqueController extends Controller
             'mail_from_name' => 'nullable|string|max:255',
         ]);
 
-        $data = $request->all();
+        $data = $request->only([
+            'nom', 'description', 'adresse', 'telephone', 'email', 'devise',
+            'theme_color', 'theme_style',
+            'mail_mailer', 'mail_host', 'mail_port', 'mail_username', 'mail_password',
+            'mail_encryption', 'mail_from_address', 'mail_from_name',
+        ]);
 
         $deletePosImageIfExists = static function (?string $filename): void {
             if (!$filename) {

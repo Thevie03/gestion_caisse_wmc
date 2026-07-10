@@ -34,7 +34,7 @@
                                 $cguFromDb = \App\Models\ParametreSysteme::get('cgu', '');
                             @endphp
                             @if (!empty($cguFromDb))
-                                {!! $cguFromDb !!}
+                                {!! \App\Support\HtmlSanitizer::clean($cguFromDb) !!}
                             @else
                                 <h5 class="mb-3">1. Objet</h5>
                                 <p class="mb-4">

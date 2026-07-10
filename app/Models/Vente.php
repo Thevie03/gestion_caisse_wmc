@@ -25,6 +25,7 @@ class Vente extends Model
         'statut_paiement',
         'mode_paiement',
         'numero_vente',
+        'offline_uuid',
         'notes',
     ];
 

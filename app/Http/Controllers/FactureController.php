@@ -20,6 +20,8 @@ class FactureController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $boutiqueActive = session('boutique_active');
         $user = auth()->user();
 

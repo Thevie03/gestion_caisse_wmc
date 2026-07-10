@@ -7,8 +7,8 @@ use App\Models\Category;
 use App\Models\Produit;
 use App\Models\Boutique;
 use App\Services\NotificationService;
+use App\Services\ProduitCodeGenerator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class ProduitController extends Controller
 {
@@ -17,6 +17,8 @@ class ProduitController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = auth()->user();
         $boutiqueId = session('boutique_active');
 
@@ -267,14 +269,22 @@ class ProduitController extends Controller
             throw $e;
         }
 
-        $data = $request->all();
+        $data = $request->only([
+            'nom', 'categorie', 'description', 'prix_achat', 'prix_vente',
+            'quantite_stock', 'stock_minimum', 'boutique_id', 'barcode', 'fournisseur_id',
+        ]);
 
         // Générer un code produit unique
-        $data['code_produit'] = 'PRD-' . strtoupper(Str::random(8));
+        $codeGenerator = ProduitCodeGenerator::fromDatabase();
+        $data['code_produit'] = $codeGenerator->reserveSku(
+            ! empty($data['code_produit']) ? (string) $data['code_produit'] : null
+        );
 
         // Générer un code-barres unique automatiquement si non fourni
         if (empty($data['barcode']) || $data['barcode'] === null || $data['barcode'] === '') {
-            $data['barcode'] = $this->genererCodeBarresUnique();
+            $data['barcode'] = $codeGenerator->reserveBarcode();
+        } else {
+            $codeGenerator->reserveBarcode((string) $data['barcode']);
         }
 
         // Si le prix d'achat n'est pas renseigné, le mettre à 0
@@ -513,7 +523,10 @@ class ProduitController extends Controller
             'image.max' => 'L\'image ne doit pas dépasser 2 Mo.'
         ]);
 
-        $data = $request->all();
+        $data = $request->only([
+            'nom', 'categorie', 'description', 'prix_achat', 'prix_vente',
+            'quantite_stock', 'stock_minimum', 'boutique_id', 'barcode', 'fournisseur_id',
+        ]);
 
         // Si la quantité en stock n'est pas renseignée, la mettre à 0
         if (!isset($data['quantite_stock']) || $data['quantite_stock'] === '' || $data['quantite_stock'] === null) {
@@ -633,40 +646,5 @@ class ProduitController extends Controller
 
         return redirect()->route('produits.show', $produit)
             ->with('success', 'Stock ajusté avec succès !');
-    }
-
-    /**
-     * Générer un code-barres unique
-     * Format : EAN-13 (13 chiffres) pour compatibilité avec les scanners standards
-     *
-     * @return string
-     */
-    private function genererCodeBarresUnique(): string
-    {
-        $maxTentatives = 100; // Limite de sécurité pour éviter les boucles infinies
-        $tentative = 0;
-
-        do {
-            // Générer un code-barres EAN-13 (13 chiffres)
-            // Format : 8XXXXXXXXXXX (8 = code pays fictif pour produits internes)
-            $codeBarres = '8' . str_pad((string) mt_rand(0, 99999999999), 11, '0', STR_PAD_LEFT);
-
-            // Vérifier l'unicité
-            $existe = Produit::where('barcode', $codeBarres)->exists();
-            $tentative++;
-
-            if ($tentative >= $maxTentatives) {
-                // En cas d'échec après plusieurs tentatives, utiliser un format avec timestamp
-                $codeBarres = '8' . str_pad((string) ((time() % 100000000000) + mt_rand(0, 999)), 11, '0', STR_PAD_LEFT);
-                // Vérifier une dernière fois
-                if (Produit::where('barcode', $codeBarres)->exists()) {
-                    // Dernier recours : format avec microtime
-                    $codeBarres = '8' . str_pad((string) ((int)(microtime(true) * 1000) % 100000000000), 11, '0', STR_PAD_LEFT);
-                }
-                break;
-            }
-        } while ($existe);
-
-        return $codeBarres;
     }
 }

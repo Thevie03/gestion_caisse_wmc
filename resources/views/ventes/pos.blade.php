@@ -616,13 +616,29 @@
                 barcodeInput.disabled = true;
 
                 try {
+                    // Mode hors connexion : recherche dans IndexedDB
+                    if (window.WmcOffline && !window.WmcOffline.network.isFullyOnline()) {
+                        const produitLocal = await window.WmcOffline.db.findProduitByBarcode(barcode.trim());
+                        if (produitLocal) {
+                            ajouterProduitDepuisBarcode({
+                                id: produitLocal.id,
+                                nom: produitLocal.nom,
+                                prix_vente: produitLocal.prix_vente,
+                                quantite_stock: produitLocal.quantite_stock,
+                                categorie: produitLocal.categorie,
+                                barcode: produitLocal.barcode,
+                            });
+                        } else {
+                            showErrorToast('Produit introuvable en local avec ce code-barres');
+                        }
+                        return;
+                    }
+
                     // Récupérer le token CSRF pour les en-têtes
                     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
                         'content');
 
                     // Faire la requête API
-                    // Utilise credentials: 'same-origin' pour envoyer les cookies de session
-                    // La route est dans web.php pour utiliser l'authentification par session
                     const response = await fetch(
                         `{{ route('api.find-product-by-barcode') }}?barcode=${encodeURIComponent(barcode.trim())}`, {
                             method: 'GET',
@@ -631,21 +647,34 @@
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRF-TOKEN': csrfToken || ''
                             },
-                            credentials: 'same-origin' // Important : envoie les cookies de session
+                            credentials: 'same-origin'
                         });
 
                     const data = await response.json();
 
                     if (data.success && data.product) {
-                        // Produit trouvé : l'ajouter au panier
                         ajouterProduitDepuisBarcode(data.product);
                     } else {
-                        // Produit non trouvé
                         showErrorToast(data.message || 'Produit introuvable avec ce code-barres');
                     }
                 } catch (error) {
+                    // Fallback IndexedDB si le réseau échoue
+                    if (window.WmcOffline) {
+                        const produitLocal = await window.WmcOffline.db.findProduitByBarcode(barcode.trim());
+                        if (produitLocal) {
+                            ajouterProduitDepuisBarcode({
+                                id: produitLocal.id,
+                                nom: produitLocal.nom,
+                                prix_vente: produitLocal.prix_vente,
+                                quantite_stock: produitLocal.quantite_stock,
+                                categorie: produitLocal.categorie,
+                                barcode: produitLocal.barcode,
+                            });
+                            return;
+                        }
+                    }
                     console.error('Erreur lors de la recherche du produit:', error);
-                    showErrorToast('Erreur lors de la recherche du produit. Veuillez réessayer.');
+                    showErrorToast('Erreur lors de la recherche du produit. Mode hors connexion activé ?');
                 } finally {
                     // Réinitialiser l'état
                     isProcessingBarcode = false;
@@ -1082,57 +1111,11 @@
             document.getElementById('client_id').addEventListener('change', sauvegarderPanier);
 
             // Finaliser la vente
-            document.getElementById('finaliser-vente').addEventListener('click', function() {
+            document.getElementById('finaliser-vente').addEventListener('click', async function() {
                 if (panier.length === 0) {
                     showWarningToast('Le panier est vide ! Veuillez ajouter des produits.');
                     return;
                 }
-
-                // Créer le formulaire de vente
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '{{ route('ventes.store') }}';
-
-                // Ajouter le token CSRF
-                const csrfToken = document.createElement('input');
-                csrfToken.type = 'hidden';
-                csrfToken.name = '_token';
-                csrfToken.value = '{{ csrf_token() }}';
-                form.appendChild(csrfToken);
-
-                // Ajouter les produits
-                panier.forEach((produit, index) => {
-                    const produitIdInput = document.createElement('input');
-                    produitIdInput.type = 'hidden';
-                    produitIdInput.name = `produits[${index}][id]`;
-                    produitIdInput.value = produit.id;
-                    form.appendChild(produitIdInput);
-
-                    const quantiteInput = document.createElement('input');
-                    quantiteInput.type = 'hidden';
-                    quantiteInput.name = `produits[${index}][quantite]`;
-                    quantiteInput.value = produit.quantite;
-                    form.appendChild(quantiteInput);
-                });
-
-                // Ajouter les autres champs
-                const remiseInput = document.createElement('input');
-                remiseInput.type = 'hidden';
-                remiseInput.name = 'remise';
-                remiseInput.value = document.getElementById('remise').value;
-                form.appendChild(remiseInput);
-
-                const clientIdInput = document.createElement('input');
-                clientIdInput.type = 'hidden';
-                clientIdInput.name = 'client_id';
-                clientIdInput.value = document.getElementById('client_id').value;
-                form.appendChild(clientIdInput);
-
-                const notesInput = document.createElement('input');
-                notesInput.type = 'hidden';
-                notesInput.name = 'notes';
-                notesInput.value = document.getElementById('notes').value;
-                form.appendChild(notesInput);
 
                 let paiements = getPaiementsDepuisUI(false);
 
@@ -1178,6 +1161,86 @@
 
                 masquerErreurPaiements();
 
+                const clientIdValue = document.getElementById('client_id').value;
+                const ventePayload = {
+                    produits: panier.map(p => ({
+                        id: p.id,
+                        quantite: p.quantite,
+                        prix_unitaire: p.prix,
+                        nom: p.nom,
+                    })),
+                    remise: parseFloat(document.getElementById('remise').value) || 0,
+                    notes: document.getElementById('notes').value,
+                    paiements: paiements,
+                };
+
+                if (clientIdValue && String(clientIdValue).startsWith('local-')) {
+                    ventePayload.client_offline_uuid = String(clientIdValue).replace('local-', '');
+                } else if (clientIdValue) {
+                    ventePayload.client_id = parseInt(clientIdValue, 10);
+                }
+
+                // Mode hors connexion : enregistrer localement
+                if (window.WmcOffline && !window.WmcOffline.network.isFullyOnline()) {
+                    try {
+                        const result = await window.WmcOffline.sync.saveVenteOffline(ventePayload);
+                        panier = [];
+                        mettreAJourPanier();
+                        localStorage.removeItem(STORAGE_KEY);
+                        document.getElementById('remise').value = 0;
+                        document.getElementById('notes').value = '';
+                        document.getElementById('client_id').value = '';
+                        showSuccessToast(`Vente enregistrée hors connexion (${result.numero_local}). Synchronisation automatique au retour du réseau.`);
+                    } catch (err) {
+                        console.error(err);
+                        showErrorToast('Impossible d\'enregistrer la vente hors connexion.');
+                    }
+                    return;
+                }
+
+                // Mode en ligne : soumission classique
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route('ventes.store') }}';
+
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                form.appendChild(csrfToken);
+
+                panier.forEach((produit, index) => {
+                    const produitIdInput = document.createElement('input');
+                    produitIdInput.type = 'hidden';
+                    produitIdInput.name = `produits[${index}][id]`;
+                    produitIdInput.value = produit.id;
+                    form.appendChild(produitIdInput);
+
+                    const quantiteInput = document.createElement('input');
+                    quantiteInput.type = 'hidden';
+                    quantiteInput.name = `produits[${index}][quantite]`;
+                    quantiteInput.value = produit.quantite;
+                    form.appendChild(quantiteInput);
+                });
+
+                const remiseInput = document.createElement('input');
+                remiseInput.type = 'hidden';
+                remiseInput.name = 'remise';
+                remiseInput.value = document.getElementById('remise').value;
+                form.appendChild(remiseInput);
+
+                const clientIdInput = document.createElement('input');
+                clientIdInput.type = 'hidden';
+                clientIdInput.name = 'client_id';
+                clientIdInput.value = clientIdValue;
+                form.appendChild(clientIdInput);
+
+                const notesInput = document.createElement('input');
+                notesInput.type = 'hidden';
+                notesInput.name = 'notes';
+                notesInput.value = document.getElementById('notes').value;
+                form.appendChild(notesInput);
+
                 paiements.forEach((paiement, index) => {
                     const modeInput = document.createElement('input');
                     modeInput.type = 'hidden';
@@ -1192,8 +1255,6 @@
                     form.appendChild(montantInput);
                 });
 
-                // Soumettre le formulaire
-                // Supprimer la sauvegarde locale avant la soumission
                 localStorage.removeItem(STORAGE_KEY);
                 document.body.appendChild(form);
                 form.submit();

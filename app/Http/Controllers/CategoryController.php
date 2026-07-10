@@ -15,6 +15,8 @@ class CategoryController extends Controller
      */
     public function index(Request $request)
     {
+        $this->validateListingFilters($request);
+
         $user = auth()->user();
         // Les employés voient uniquement les catégories de leur boutique
         // Les propriétaires voient les catégories de la boutique active (session)
