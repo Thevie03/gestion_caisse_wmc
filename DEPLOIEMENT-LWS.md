@@ -1,6 +1,12 @@
 # Déploiement et mises à jour — LWS + GitHub (Gestion Caisse WMC)
 
+> **Guide complet LWS (Laravel 11)** : voir [`DEPLOIEMENT_LWS.md`](DEPLOIEMENT_LWS.md)  
+> **Modèle `.env` production** : [`.env.lws.example`](.env.lws.example)  
+> **Scripts** : `deploy-lws.sh` (serveur) · `deploy-lws.ps1` (Windows)
+
 Ce guide explique comment **relier ton site déjà en ligne (LWS)** à **GitHub** et comment **mettre à jour** le code en production sans perdre la base MySQL, le fichier **`.env`** ni le dossier **`storage/`**.
+
+**Prérequis actuels : PHP 8.2+ · Laravel 11 · branche `upgrade/laravel-11`**
 
 ---
 
@@ -25,9 +31,9 @@ Les données (MySQL, `.env`, fichiers dans `storage`) **restent sur le serveur**
 | Élément | Valeur actuelle du projet (à modifier si besoin) |
 |--------|---------------------------------------------------|
 | **Dépôt GitHub** | `https://github.com/Thevie03/gestion_caisse_wmc.git` |
-| **Branche** | `main` (si ton dépôt utilise `master`, remplace `main` par `master` partout dans ce doc) |
-| **Dossier Laravel sur le serveur** | Exemple : `~/public_html/crm` — **remplace par le vrai chemin** de ton app (ex. `~/public_html/gestion-caisse`). |
-| **Racine web (cPanel / sous-domaine)** | Doit pointer vers le dossier **`public`** de Laravel, ex. `public_html/crm/public` — **obligatoire**, pas le dossier parent seul. |
+| **Branche** | `upgrade/laravel-11` (puis `main` après fusion PR) |
+| **Dossier Laravel sur le serveur** | `~/public_html/thevie` |
+| **Racine web (cPanel / sous-domaine)** | `public_html/thevie/public` **ou** racine + `.htaccess` → voir `CONFIGURATION_RACINE.md` |
 
 ---
 
@@ -109,24 +115,14 @@ composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan storage:link
 php artisan optimize
-```
-
-Dans **cPanel** : sous-domaine / domaine → **document root** = **`…/ton_dossier/public`** (pas seulement `ton_dossier`).
-
-**Permissions** (si tu as le script dans le projet) :
-
-```bash
 bash fix_permissions_simple.sh
 ```
 
-**Front (Vite)** : en local (PowerShell, à la racine du projet) :
+Ou en une commande : `bash deploy-lws.sh` (après avoir configuré `.env` depuis `.env.lws.example`).
 
-```powershell
-npm ci
-npm run build
-```
+Dans **cPanel** : sous-domaine / domaine → **document root** = **`public_html/thevie/public`** (pas seulement `thevie`).
 
-Puis envoie le dossier **`public/build`** sur le serveur dans **`crm/public/build/`** (adapte `crm` à ton chemin), **sauf** si tu lances `npm run build` directement sur le serveur (Node requis).
+**Front** : Bootstrap CDN — pas de `npm run build` requis.
 
 ---
 
@@ -136,39 +132,20 @@ Puis envoie le dossier **`public/build`** sur le serveur dans **`crm/public/buil
 
 ```powershell
 cd "C:\Users\WMC\Desktop\APP GCAISSE WMC 2026\APP GCAISSE WMC 2026"
-git add .
-git commit -m "Description courte de la mise à jour"
-git push origin main
+.\deploy-lws.ps1 -Message "Description courte de la mise à jour"
 ```
 
-*(Adapte le chemin et remplace `main` si ta branche a un autre nom.)*
-
-### Étape 2 — Front modifié ? (JS, CSS, `@vite`, Blade avec assets)
-
-En local :
+Ou manuellement :
 
 ```powershell
-npm ci
-npm run build
+git push origin upgrade/laravel-11
 ```
 
-Puis **transfère** tout le dossier **`public\build`** vers le serveur : **`ton_dossier/public/build/`**.
-
-### Étape 3 — Sur le serveur (SSH)
+### Étape 2 — Sur le serveur (SSH)
 
 ```bash
-cd ~/public_html/crm
-git pull origin main
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan optimize:clear
-php artisan optimize
-```
-
-### Étape 4 — Si le site affiche des erreurs de droits
-
-```bash
-bash fix_permissions_simple.sh
+cd ~/public_html/thevie
+bash deploy-lws.sh
 ```
 
 ---
@@ -176,16 +153,9 @@ bash fix_permissions_simple.sh
 ## Bloc copier-coller : mise à jour serveur complète
 
 ```bash
-cd ~/public_html/crm
-git pull origin main
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan optimize:clear
-php artisan optimize
-bash fix_permissions_simple.sh
+cd ~/public_html/thevie
+bash deploy-lws.sh
 ```
-
-*(Change `~/public_html/crm` si ton installation est ailleurs.)*
 
 ---
 
