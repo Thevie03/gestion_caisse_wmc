@@ -7,13 +7,65 @@
  */
 
 /** Doit correspondre au PAGES_CACHE du service-worker.js */
-export const PAGES_CACHE_NAME = 'wmc-caisse-v1.3.5-pages';
+export const PAGES_CACHE_NAME = 'wmc-caisse-v1.3.6-pages';
+
+const VISITED_ROUTES_KEY = 'wmc_visited_routes';
+const MAX_VISITED_ROUTES = 25;
 
 /** Pages essentielles pour travailler hors connexion */
 export const APP_PAGES_TO_CACHE = [
     '/dashboard',
     '/ventes/pos/interface',
+    '/ventes',
+    '/produits',
+    '/stock',
+    '/clients',
+    '/factures',
+    '/rapports',
 ];
+
+/**
+ * Mémoriser les routes visitées en ligne pour les mettre en cache offline.
+ * @param {string} path
+ */
+export function rememberVisitedRoute(path) {
+    if (!path || path.startsWith('/api') || path === '/offline.html') {
+        return;
+    }
+
+    let routes = [];
+    try {
+        routes = JSON.parse(localStorage.getItem(VISITED_ROUTES_KEY) || '[]');
+    } catch {
+        routes = [];
+    }
+
+    routes = [path, ...routes.filter((route) => route !== path)].slice(0, MAX_VISITED_ROUTES);
+    localStorage.setItem(VISITED_ROUTES_KEY, JSON.stringify(routes));
+}
+
+/**
+ * @returns {string[]}
+ */
+export function getVisitedRoutes() {
+    try {
+        return JSON.parse(localStorage.getItem(VISITED_ROUTES_KEY) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Demander au SW de pré-cacher les pages applicatives.
+ */
+export function precacheViaServiceWorker() {
+    if (!navigator.serviceWorker?.controller) {
+        return;
+    }
+
+    const urls = [...new Set([...APP_PAGES_TO_CACHE, ...getVisitedRoutes()])];
+    navigator.serviceWorker.controller.postMessage({ type: 'PRECACHE_APP_PAGES', urls });
+}
 
 /**
  * Mettre une URL en cache (HTML uniquement, statut 200).
@@ -75,6 +127,7 @@ export async function cacheAppShell() {
 
     const paths = new Set([
         ...APP_PAGES_TO_CACHE,
+        ...getVisitedRoutes(),
         window.location.pathname,
     ]);
 
@@ -95,6 +148,8 @@ export async function cacheAppShell() {
     localStorage.setItem('wmc_pages_cached_list', JSON.stringify(cached));
 
     window.dispatchEvent(new CustomEvent('wmc-pages-cached', { detail: { cached, failed } }));
+
+    precacheViaServiceWorker();
 
     return { cached, failed };
 }

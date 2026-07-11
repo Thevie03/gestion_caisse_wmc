@@ -7,7 +7,7 @@ import { offlineNetwork } from './network.js';
 import { offlineApi } from './api.js';
 import { offlineCache } from './cache.js';
 import { offlineSync } from './sync.js';
-import { cacheAppShell, isPageCached, PAGES_CACHE_NAME } from './pages-cache.js';
+import { cacheAppShell, isPageCached, PAGES_CACHE_NAME, rememberVisitedRoute } from './pages-cache.js';
 
 const statusEl = document.getElementById('wmc-offline-status');
 const hintEl = document.getElementById('wmc-offline-hint');
@@ -133,6 +133,7 @@ async function rememberAndCacheCurrentRoute() {
     }
 
     localStorage.setItem('wmc_last_app_route', path);
+    rememberVisitedRoute(path);
 
     if (offlineNetwork.isFullyOnline()) {
         await cacheAppShell();
@@ -145,6 +146,39 @@ async function onServerOnline() {
     await offlineSync.syncAll();
     await updateLastSyncUI();
     await updatePendingUI();
+}
+
+function setupOfflineNavigation() {
+    document.addEventListener('click', async (event) => {
+        if (offlineNetwork.isFullyOnline()) {
+            return;
+        }
+
+        const link = event.target.closest('a[href]');
+        if (!link || link.target === '_blank' || link.hasAttribute('download')) {
+            return;
+        }
+
+        let url;
+        try {
+            url = new URL(link.href, window.location.origin);
+        } catch {
+            return;
+        }
+
+        if (url.origin !== window.location.origin || url.pathname.startsWith('/api')) {
+            return;
+        }
+
+        const cached = await isPageCached(url.pathname);
+        if (!cached) {
+            event.preventDefault();
+            window.alert(
+                'Cette page n\'est pas disponible hors connexion.\n\n' +
+                    'Ouvrez-la une fois en ligne pour la mettre en cache, ou utilisez le POS / le dashboard.'
+            );
+        }
+    });
 }
 
 async function init() {
@@ -200,6 +234,8 @@ async function init() {
             }
         });
     }
+
+    setupOfflineNavigation();
 
     if (offlineNetwork.isFullyOnline()) {
         await onServerOnline();

@@ -3,11 +3,13 @@
  *
  * Stratégies :
  * - Assets statiques / CDN : cache-first
- * - Pages applicatives : network-first + cache (app shell offline)
+ * - Pages applicatives : stale-while-revalidate (cache immédiat + réseau en arrière-plan)
  * - API : réseau uniquement
  */
 
-const CACHE_VERSION = 'wmc-caisse-v1.3.5';
+const NAV_FETCH_TIMEOUT_MS = 4000;
+
+const CACHE_VERSION = 'wmc-caisse-v1.3.6';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const PAGES_CACHE = `${CACHE_VERSION}-pages`;
@@ -171,27 +173,63 @@ async function precacheAppUrls(urls) {
 
 // ─── Stratégies fetch ─────────────────────────────────────────────────────────
 
+async function fetchWithTimeout(request, ms = NAV_FETCH_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ms);
+
+    try {
+        return await fetch(request, {
+            credentials: 'include',
+            redirect: 'follow',
+            signal: controller.signal,
+        });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+function revalidatePageInBackground(request) {
+    fetchWithTimeout(request, NAV_FETCH_TIMEOUT_MS)
+        .then(async (response) => {
+            if (response.ok && isHtmlResponse(response)) {
+                await putPageInCache(request, response);
+            }
+        })
+        .catch(() => {});
+}
+
 async function cacheFirst(request, cacheName) {
     const cached = await caches.match(request);
     if (cached) {
         return cached;
     }
 
-    const response = await fetch(request);
-    if (response.ok) {
-        const cache = await caches.open(cacheName);
-        cache.put(request, response.clone());
+    try {
+        const response = await fetchWithTimeout(request, NAV_FETCH_TIMEOUT_MS);
+        if (response.ok) {
+            const cache = await caches.open(cacheName);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        return caches.match(request);
     }
-    return response;
 }
 
 /**
- * Navigation : réseau d'abord (comportement normal Laravel).
- * Cache uniquement si le réseau échoue (mode hors connexion).
+ * Navigation : cache immédiat si disponible (évite ~60s de timeout réseau hors ligne),
+ * sinon réseau avec timeout court, puis fallback cache / offline.html.
  */
 async function handleNavigation(request) {
+    const cached = await matchExactCachedPage(request);
+
+    if (cached) {
+        revalidatePageInBackground(request);
+        return cached;
+    }
+
     try {
-        const response = await fetch(request, { credentials: 'include', redirect: 'follow' });
+        const response = await fetchWithTimeout(request, NAV_FETCH_TIMEOUT_MS);
 
         if (response.ok && isHtmlResponse(response)) {
             await putPageInCache(request, response);
