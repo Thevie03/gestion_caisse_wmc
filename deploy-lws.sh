@@ -6,7 +6,7 @@
 
 set -e
 
-APP_DIR="${APP_DIR:-$HOME/public_html/thevie}"
+APP_DIR="${APP_DIR:-$HOME/public_html/gestioncaisse}"
 GIT_BRANCH="${GIT_BRANCH:-upgrade/laravel-11}"
 GIT_REMOTE="${GIT_REMOTE:-origin}"
 
@@ -60,6 +60,6 @@ echo ""
 echo "=========================================="
 echo "  DÉPLOIEMENT TERMINÉ"
 echo "=========================================="
-echo "Vérifiez : https://<votre-domaine>/thevie"
+echo "Vérifiez : https://<votre-domaine>"
 echo "Logs     : storage/logs/laravel.log"
 echo ""

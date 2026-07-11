@@ -27,6 +27,6 @@ git push origin $Branch
 
 Write-Host ""
 Write-Host "Push terminé. Sur le serveur LWS (SSH) :" -ForegroundColor Green
-Write-Host "  cd ~/public_html/thevie" -ForegroundColor White
+Write-Host "  cd ~/public_html/gestioncaisse" -ForegroundColor White
 Write-Host "  bash deploy-lws.sh" -ForegroundColor White
 Write-Host ""

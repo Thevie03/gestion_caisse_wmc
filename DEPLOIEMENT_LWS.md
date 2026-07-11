@@ -1,6 +1,6 @@
 # Déploiement LWS — Gestion Caisse WMC (Laravel 11)
 
-Guide prêt à l'emploi pour l'hébergement **LWS** avec le dossier **`public_html/thevie`**.
+Guide prêt à l'emploi pour l'hébergement **LWS** avec le dossier **`public_html/gestioncaisse`**.
 
 ---
 
@@ -10,8 +10,8 @@ Guide prêt à l'emploi pour l'hébergement **LWS** avec le dossier **`public_ht
 |---------|--------|
 | Dépôt GitHub | `https://github.com/Thevie03/gestion_caisse_wmc.git` |
 | Branche actuelle | `upgrade/laravel-11` (puis `main` après fusion) |
-| Dossier serveur | `~/public_html/thevie` |
-| URL application | `https://votre-domaine.com/thevie` |
+| Dossier serveur | `~/public_html/gestioncaisse` |
+| URL application | `https://votre-domaine.com` (document root → `gestioncaisse/public`) |
 | PHP requis | **8.2+** |
 | Laravel | **11.x** |
 
@@ -36,8 +36,8 @@ fileinfo, gd, zip, curl, bcmath
 
 | Option | Configuration |
 |--------|---------------|
-| **A — Recommandée** | Document root = `public_html/thevie/public` |
-| **B — Sous-dossier** | Document root = `public_html` + `.htaccess` à la racine de `thevie/` (déjà dans le projet) |
+| **A — Recommandée** | Document root = `public_html/gestioncaisse/public` |
+| **B — Sous-dossier** | Document root = `public_html` + `.htaccess` à la racine de `gestioncaisse/` (déjà dans le projet) |
 
 ---
 
@@ -46,7 +46,7 @@ fileinfo, gd, zip, curl, bcmath
 ### Création
 
 ```bash
-cd ~/public_html/thevie
+cd ~/public_html/gestioncaisse
 cp .env.lws.example .env
 nano .env   # ou éditeur cPanel
 php artisan key:generate
@@ -59,7 +59,7 @@ Le modèle complet est dans **`.env.lws.example`** à la racine du projet.
 ```env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://votre-domaine.com/thevie
+APP_URL=https://votre-domaine.com
 
 DB_HOST=127.0.0.1
 DB_DATABASE=<base_lws>
@@ -82,8 +82,8 @@ LOG_LEVEL=error
 cd ~/public_html
 
 # Clone (nouvelle install)
-git clone https://github.com/Thevie03/gestion_caisse_wmc.git thevie
-cd thevie
+git clone https://github.com/Thevie03/gestion_caisse_wmc.git gestioncaisse
+cd gestioncaisse
 git checkout upgrade/laravel-11
 
 # Configuration
@@ -128,7 +128,7 @@ git push origin upgrade/laravel-11
 ### Étape B — Sur le serveur LWS (SSH)
 
 ```bash
-cd ~/public_html/thevie
+cd ~/public_html/gestioncaisse
 bash deploy-lws.sh
 ```
 
@@ -181,7 +181,7 @@ git pull origin upgrade/laravel-11
 - [ ] Extensions PHP activées (dont **gd**)
 - [ ] `.env` configuré (`APP_DEBUG=false`)
 - [ ] `APP_KEY` générée (`php artisan key:generate`)
-- [ ] `APP_URL` avec `/thevie` si sous-dossier
+- [ ] `APP_URL` = domaine sans slash final (ajouter `/gestioncaisse` seulement si accès via sous-dossier)
 - [ ] Base MySQL créée et testée
 - [ ] `composer install --no-dev` exécuté
 - [ ] `php artisan migrate --force` exécuté
@@ -196,13 +196,13 @@ git pull origin upgrade/laravel-11
 | Problème | Solution |
 |----------|----------|
 | **Erreur 500** | Consulter `storage/logs/laravel.log` |
-| **403 Forbidden** | Vérifier document root → `thevie/public` ou `.htaccess` racine |
+| **403 Forbidden** | Vérifier document root → `gestioncaisse/public` ou `.htaccess` racine |
 | **No application encryption key** | `php artisan key:generate` |
 | **Connexion MySQL** | Vérifier `DB_HOST`, identifiants cPanel |
 | **Colonne SQL manquante** | `php artisan migrate --force` |
 | **Class not found** | `composer install --no-dev --optimize-autoloader` |
 | **PWA offline** | HTTPS obligatoire + `service-worker.js` accessible |
-| **404 sur /thevie** | Voir `CONFIGURATION_RACINE.md` et `GUIDE_RESOLUTION_404.md` |
+| **404 sur /gestioncaisse** | Voir `CONFIGURATION_RACINE.md` et `GUIDE_RESOLUTION_404.md` |
 
 ### Debug temporaire
 
@@ -224,7 +224,7 @@ Remettez `false` après diagnostic.
 | `fix_permissions_simple.sh` | Correction permissions |
 | `.htaccess` (racine) | Redirection vers `public/` |
 | `public/.htaccess` | Règles Laravel + sécurité + PWA |
-| `CONFIGURATION_RACINE.md` | Config sous-dossier `/thevie` |
+| `CONFIGURATION_RACINE.md` | Config sous-dossier `/gestioncaisse` |
 | `DEPLOIEMENT-LWS.md` | Workflow GitHub ↔ LWS détaillé |
 
 ---

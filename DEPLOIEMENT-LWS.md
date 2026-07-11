@@ -32,8 +32,8 @@ Les données (MySQL, `.env`, fichiers dans `storage`) **restent sur le serveur**
 |--------|---------------------------------------------------|
 | **Dépôt GitHub** | `https://github.com/Thevie03/gestion_caisse_wmc.git` |
 | **Branche** | `upgrade/laravel-11` (puis `main` après fusion PR) |
-| **Dossier Laravel sur le serveur** | `~/public_html/thevie` |
-| **Racine web (cPanel / sous-domaine)** | `public_html/thevie/public` **ou** racine + `.htaccess` → voir `CONFIGURATION_RACINE.md` |
+| **Dossier Laravel sur le serveur** | `~/public_html/gestioncaisse` |
+| **Racine web (cPanel / sous-domaine)** | `public_html/gestioncaisse/public` **ou** racine + `.htaccess` → voir `CONFIGURATION_RACINE.md` |
 
 ---
 
@@ -120,7 +120,7 @@ bash fix_permissions_simple.sh
 
 Ou en une commande : `bash deploy-lws.sh` (après avoir configuré `.env` depuis `.env.lws.example`).
 
-Dans **cPanel** : sous-domaine / domaine → **document root** = **`public_html/thevie/public`** (pas seulement `thevie`).
+Dans **cPanel** : sous-domaine / domaine → **document root** = **`public_html/gestioncaisse/public`** (pas seulement `gestioncaisse`).
 
 **Front** : Bootstrap CDN — pas de `npm run build` requis.
 
@@ -144,7 +144,7 @@ git push origin upgrade/laravel-11
 ### Étape 2 — Sur le serveur (SSH)
 
 ```bash
-cd ~/public_html/thevie
+cd ~/public_html/gestioncaisse
 bash deploy-lws.sh
 ```
 
@@ -153,7 +153,7 @@ bash deploy-lws.sh
 ## Bloc copier-coller : mise à jour serveur complète
 
 ```bash
-cd ~/public_html/thevie
+cd ~/public_html/gestioncaisse
 bash deploy-lws.sh
 ```
 
