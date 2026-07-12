@@ -64,7 +64,7 @@ $htmlClasses = [];
 
 </head>
 
-<body>
+<body class="wmc-app-body">
     <!-- Overlay pour fermer la sidebar sur mobile -->
     <div class="sidebar-overlay" onclick="closeSidebar()"></div>
 
@@ -109,8 +109,8 @@ $htmlClasses = [];
                             'badge' => 'Pilotage',
                             'icon' => 'fas fa-tachometer-alt',
                             'image' => $sharedHeroImage,
-                            'thumb1' => $sharedHeroImage,
-                            'thumb2' => $sharedHeroImage,
+                            'thumb1' => asset('images/pos/pos-stock.jpg'),
+                            'thumb2' => asset('images/pos/pos-payment.jpg'),
                         ];
                     } elseif (request()->routeIs('ventes.*')) {
                         $heroConfig = [
@@ -193,7 +193,7 @@ $htmlClasses = [];
                                 <h2 class="fw-bold mb-2 wmc-context-hero-title">{{ $heroConfig['title'] }}</h2>
                                 <p class="mb-4 text-muted wmc-context-hero-subtitle">{{ $heroConfig['subtitle'] }}</p>
 
-                                <div class="row g-2">
+                                <div class="row g-2 wmc-context-hero-thumbs d-none d-md-flex">
                                     <div class="col-6">
                                         <div
                                             class="position-relative overflow-hidden rounded-3 border wmc-context-hero-thumb-wrap">
@@ -211,7 +211,7 @@ $htmlClasses = [];
                                 </div>
                             </div>
 
-                            <div class="col-12 col-lg-7 p-0 position-relative">
+                            <div class="col-12 col-lg-7 p-0 position-relative wmc-context-hero-media">
                                 <img src="{{ $heroConfig['image'] }}" alt=""
                                     class="w-100 wmc-context-hero-main" fetchpriority="high" decoding="async">
                                 <div class="position-absolute bottom-0 start-0 end-0 p-3 wmc-context-hero-overlay">

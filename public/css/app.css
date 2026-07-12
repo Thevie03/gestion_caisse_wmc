@@ -1560,6 +1560,10 @@ footer {
     .btn {
         padding: var(--spacing-xs) var(--spacing-sm);
         font-size: 0.8125rem;
+    }
+
+    .main-content .btn:not(.btn-sm):not(.btn-link):not(.dropdown-toggle),
+    .modal .btn:not(.btn-sm):not(.btn-link) {
         width: 100%;
         margin-bottom: var(--spacing-xs);
     }
