@@ -24,6 +24,7 @@ const OFFLINE_FALLBACK_ROUTES = [
 const PRECACHE_URLS = [
     '/offline.html',
     '/css/app.css',
+    '/css/pwa-responsive.css',
     '/manifest.json',
     '/js/pwa-register.js',
     '/js/offline/init.js',

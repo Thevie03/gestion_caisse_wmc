@@ -53,7 +53,11 @@ $htmlClasses = [];
         crossorigin="anonymous">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    @php
+        $cssVersion = file_exists(public_path('css/app.css')) ? filemtime(public_path('css/app.css')) : time();
+    @endphp
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ $cssVersion }}">
+    <link rel="stylesheet" href="{{ asset('css/pwa-responsive.css') }}?v={{ $cssVersion }}">
 
     <!-- Chart.js (chargé dans le head pour être disponible tôt) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
@@ -615,7 +619,7 @@ $htmlClasses = [];
     </script>
 
     {{-- PWA : enregistrement Service Worker + bannière d'installation --}}
-    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.5" defer></script>
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.7" defer></script>
     @include('layouts.partials.pwa-scripts')
 
     {{-- Mode hors connexion : IndexedDB + bootstrap (Étape 2) --}}

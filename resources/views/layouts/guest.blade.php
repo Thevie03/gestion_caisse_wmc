@@ -31,15 +31,17 @@
         $cssVersion = file_exists(public_path('css/app.css')) ? filemtime(public_path('css/app.css')) : time();
     @endphp
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ $cssVersion }}">
+    <link rel="stylesheet" href="{{ asset('css/pwa-responsive.css') }}?v={{ $cssVersion }}">
 
     <!-- Styles critiques inline pour garantir l'affichage -->
     <style>
-        /* Styles critiques pour la page de login - garantissent l'affichage même si le CSS externe ne se charge pas */
         .login-wrapper {
             display: flex !important;
+            min-height: 100dvh !important;
             min-height: 100vh !important;
             width: 100% !important;
-            overflow: hidden !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
         }
 
         .login-left-panel {
@@ -62,24 +64,16 @@
                 flex-direction: column !important;
             }
 
-            .login-left-panel,
             .login-right-panel {
+                display: none !important;
+            }
+
+            .login-left-panel {
                 flex: 1 1 auto !important;
                 width: 100% !important;
                 max-width: 100% !important;
-            }
-
-            .login-right-panel {
-                order: -1 !important;
-                min-height: 40vh !important;
-                max-height: 40vh !important;
-            }
-        }
-
-        @media (max-width: 575.98px) {
-            .login-right-panel {
-                min-height: 30vh !important;
-                max-height: 30vh !important;
+                min-height: 100dvh !important;
+                min-height: 100vh !important;
             }
         }
 
@@ -92,7 +86,7 @@
 </head>
 
 <body class="font-sans text-gray-900 antialiased"
-    style="margin: 0; padding: 0; overflow-x: hidden; height: 100%; width: 100%;">
+    style="margin: 0; padding: 0; overflow-x: hidden; overflow-y: auto; min-height: 100%; width: 100%;">
     {{ $slot }}
 
     <!-- Bootstrap JS -->
@@ -104,7 +98,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" crossorigin="anonymous"></script>
 
     {{-- PWA : enregistrement Service Worker --}}
-    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.5" defer></script>
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.7" defer></script>
     @include('layouts.partials.offline-scripts')
 </body>
 

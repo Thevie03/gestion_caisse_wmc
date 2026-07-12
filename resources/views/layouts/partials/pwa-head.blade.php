@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="WMC Caisse">
-<link rel="apple-touch-icon" href="{{ asset('images/logos/logo_wmc_orange.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('images/icons/apple-touch-icon.png') }}">
 
 {{-- Microsoft / Windows --}}
 <meta name="msapplication-TileColor" content="{{ $pwaThemeColor }}">
