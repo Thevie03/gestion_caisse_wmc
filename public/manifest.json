@@ -5,7 +5,7 @@
     "description": "Application de gestion de caisse WMC — ventes, stock, clients et paiements.",
     "lang": "fr",
     "dir": "ltr",
-    "start_url": "/dashboard",
+    "start_url": "/login",
     "scope": "/",
     "display": "standalone",
     "display_override": ["standalone", "minimal-ui", "browser"],

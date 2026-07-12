@@ -9,7 +9,7 @@
 
 const NAV_FETCH_TIMEOUT_MS = 4000;
 
-const CACHE_VERSION = 'wmc-caisse-v1.3.6';
+const CACHE_VERSION = 'wmc-caisse-v1.3.7';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const PAGES_CACHE = `${CACHE_VERSION}-pages`;
@@ -81,22 +81,62 @@ function isHtmlResponse(response) {
     return type.includes('text/html');
 }
 
+/**
+ * Safari iOS refuse les réponses avec redirected=true servies par le SW.
+ * On recrée une Response « propre » sans historique de redirection.
+ */
+async function toSafeNavigationResponse(response) {
+    if (!response) {
+        return response;
+    }
+
+    if (!response.redirected && response.type !== 'opaqueredirect') {
+        return response;
+    }
+
+    const body = await response.blob();
+    return new Response(body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+    });
+}
+
+/**
+ * Ne mettre en cache que du HTML 200 final, sans redirection (évite erreur Safari PWA).
+ */
+function isCacheablePageResponse(request, response) {
+    if (!response || response.status !== 200 || !isHtmlResponse(response)) {
+        return false;
+    }
+
+    if (response.redirected || response.type === 'opaqueredirect') {
+        return false;
+    }
+
+    const reqUrl = new URL(request.url);
+    const resUrl = new URL(response.url);
+
+    return reqUrl.pathname === resUrl.pathname;
+}
+
 function pageCacheKey(url) {
     return new Request(new URL(url.pathname, url.origin).toString(), { method: 'GET' });
 }
 
 async function putPageInCache(request, response) {
-    if (!response || response.status !== 200 || !isHtmlResponse(response)) {
+    if (!isCacheablePageResponse(request, response)) {
         return;
     }
 
+    const safeResponse = await toSafeNavigationResponse(response);
     const cache = await caches.open(PAGES_CACHE);
     const url = new URL(request.url);
 
-    await cache.put(request, response.clone());
-    await cache.put(pageCacheKey(url), response.clone());
-    await cache.put(url.pathname, response.clone());
-    await cache.put(url.href, response.clone());
+    await cache.put(request, safeResponse.clone());
+    await cache.put(pageCacheKey(url), safeResponse.clone());
+    await cache.put(url.pathname, safeResponse.clone());
+    await cache.put(url.href, safeResponse.clone());
 }
 
 /**
@@ -108,23 +148,23 @@ async function matchExactCachedPage(request) {
 
     let cached = await cache.match(request);
     if (cached) {
-        return cached;
+        return toSafeNavigationResponse(cached);
     }
 
     const url = new URL(request.url);
     cached = await cache.match(pageCacheKey(url));
     if (cached) {
-        return cached;
+        return toSafeNavigationResponse(cached);
     }
 
     cached = await cache.match(url.pathname);
     if (cached) {
-        return cached;
+        return toSafeNavigationResponse(cached);
     }
 
     cached = await cache.match(url.href);
     if (cached) {
-        return cached;
+        return toSafeNavigationResponse(cached);
     }
 
     return null;
@@ -147,7 +187,7 @@ async function matchOfflineFallbackPage(request) {
                 c.match(new URL(route, url.origin).toString())
             );
             if (cached) {
-                return cached;
+                return toSafeNavigationResponse(cached);
             }
         }
     }
@@ -160,10 +200,12 @@ async function precacheAppUrls(urls) {
 
     for (const path of urls) {
         try {
-            const response = await fetch(path, { credentials: 'include', redirect: 'follow' });
-            if (response.ok && isHtmlResponse(response)) {
-                const request = new Request(new URL(path, self.location.origin).toString());
-                await cache.put(request, response.clone());
+            const request = new Request(new URL(path, self.location.origin).toString(), { method: 'GET' });
+            const response = await fetch(request, { credentials: 'include', redirect: 'follow' });
+            if (isCacheablePageResponse(request, response)) {
+                const safe = await toSafeNavigationResponse(response);
+                await cache.put(request, safe.clone());
+                await cache.put(path, safe.clone());
             }
         } catch (error) {
             console.warn('[SW] Pré-cache page ignoré :', path, error);
@@ -191,7 +233,7 @@ async function fetchWithTimeout(request, ms = NAV_FETCH_TIMEOUT_MS) {
 function revalidatePageInBackground(request) {
     fetchWithTimeout(request, NAV_FETCH_TIMEOUT_MS)
         .then(async (response) => {
-            if (response.ok && isHtmlResponse(response)) {
+            if (isCacheablePageResponse(request, response)) {
                 await putPageInCache(request, response);
             }
         })
@@ -231,11 +273,11 @@ async function handleNavigation(request) {
     try {
         const response = await fetchWithTimeout(request, NAV_FETCH_TIMEOUT_MS);
 
-        if (response.ok && isHtmlResponse(response)) {
+        if (isCacheablePageResponse(request, response)) {
             await putPageInCache(request, response);
         }
 
-        return response;
+        return toSafeNavigationResponse(response);
     } catch {
         const fallback = await matchOfflineFallbackPage(request);
         if (fallback) {
@@ -376,13 +418,17 @@ self.addEventListener('message', (event) => {
         const pageUrl = event.data.url;
         if (pageUrl) {
             event.waitUntil(
-                fetch(pageUrl, { credentials: 'include', redirect: 'follow' })
-                    .then((response) => {
-                        if (response.ok && isHtmlResponse(response)) {
-                            return putPageInCache(new Request(pageUrl), response);
+                (async () => {
+                    const request = new Request(pageUrl, { method: 'GET' });
+                    try {
+                        const response = await fetch(request, { credentials: 'include', redirect: 'follow' });
+                        if (isCacheablePageResponse(request, response)) {
+                            await putPageInCache(request, response);
                         }
-                    })
-                    .catch(() => {})
+                    } catch {
+                        // ignore
+                    }
+                })()
             );
         }
     }

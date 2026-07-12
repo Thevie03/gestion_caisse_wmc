@@ -7,7 +7,7 @@
  */
 
 /** Doit correspondre au PAGES_CACHE du service-worker.js */
-export const PAGES_CACHE_NAME = 'wmc-caisse-v1.3.6-pages';
+export const PAGES_CACHE_NAME = 'wmc-caisse-v1.3.7-pages';
 
 const VISITED_ROUTES_KEY = 'wmc_visited_routes';
 const MAX_VISITED_ROUTES = 25;
@@ -91,8 +91,14 @@ export async function cachePageUrl(urlOrPath) {
             headers: { Accept: 'text/html' },
         });
 
-        if (!response.ok) {
-            console.warn('[PagesCache] Échec HTTP', response.status, pathname);
+        if (!response.ok || response.redirected) {
+            console.warn('[PagesCache] Échec HTTP ou redirection', response.status, pathname);
+            return false;
+        }
+
+        const resUrl = new URL(response.url);
+        if (resUrl.pathname !== pathname) {
+            console.warn('[PagesCache] URL finale différente (redirection auth ?)', pathname, '→', resUrl.pathname);
             return false;
         }
 
