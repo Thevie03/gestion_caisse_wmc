@@ -3,5 +3,5 @@
     Charger uniquement pour les utilisateurs authentifiés.
 --}}
 @auth
-    <script type="module" src="{{ asset('js/offline/init.js') }}?v=1.3.5"></script>
+    <script type="module" src="{{ asset('js/offline/init.js') }}?v=1.4.0"></script>
 @endauth

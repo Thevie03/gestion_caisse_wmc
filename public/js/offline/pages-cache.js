@@ -1,26 +1,20 @@
 /**
  * WMC CAISSE — Cache des pages applicatives (navigateur)
  *
- * Le cache depuis le Service Worker seul échoue souvent avec Laravel
- * (session / cookies). Ici on met en cache depuis la page ouverte,
- * avec les cookies de session actifs.
+ * Met en cache depuis la page ouverte (cookies de session actifs).
  */
 
-/** Doit correspondre au PAGES_CACHE du service-worker.js */
-export const PAGES_CACHE_NAME = 'wmc-caisse-v1.3.5-pages';
+import { APP_PAGES_TO_CACHE, PAGES_CACHE_NAME } from './offline-config.js';
 
-/** Pages essentielles pour travailler hors connexion */
-export const APP_PAGES_TO_CACHE = [
-    '/dashboard',
-    '/ventes/pos/interface',
-];
+export { APP_PAGES_TO_CACHE, PAGES_CACHE_NAME };
 
 /**
- * Mettre une URL en cache (HTML uniquement, statut 200).
+ * Mettre une URL en cache (HTML 200 uniquement).
  * @param {string} urlOrPath
+ * @param {number} [timeoutMs=8000]
  * @returns {Promise<boolean>}
  */
-export async function cachePageUrl(urlOrPath) {
+export async function cachePageUrl(urlOrPath, timeoutMs = 8000) {
     if (!('caches' in window)) {
         return false;
     }
@@ -30,6 +24,8 @@ export async function cachePageUrl(urlOrPath) {
         : new URL(urlOrPath, window.location.origin).href;
 
     const pathname = new URL(fullUrl).pathname;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
         const response = await fetch(fullUrl, {
@@ -37,16 +33,22 @@ export async function cachePageUrl(urlOrPath) {
             redirect: 'follow',
             cache: 'no-cache',
             headers: { Accept: 'text/html' },
+            signal: controller.signal,
         });
 
+        clearTimeout(timer);
+
         if (!response.ok) {
-            console.warn('[PagesCache] Échec HTTP', response.status, pathname);
+            if (response.status === 404) {
+                console.debug('[PagesCache] Route absente (ignorée) :', pathname);
+            } else {
+                console.warn('[PagesCache] Échec HTTP', response.status, pathname);
+            }
             return false;
         }
 
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.includes('text/html')) {
-            console.warn('[PagesCache] Réponse non HTML', pathname);
             return false;
         }
 
@@ -57,26 +59,24 @@ export async function cachePageUrl(urlOrPath) {
         await cache.put(pathname, response.clone());
         await cache.put(new Request(fullUrl, { method: 'GET' }), response.clone());
 
-        console.info('[PagesCache] Page mise en cache :', pathname);
+        console.info('[PagesCache] Page en cache :', pathname);
         return true;
     } catch (error) {
-        console.warn('[PagesCache] Impossible de mettre en cache', pathname, error);
+        clearTimeout(timer);
+        console.warn('[PagesCache] Échec cache', pathname, error.message);
         return false;
     }
 }
 
 /**
- * Mettre en cache le POS, le dashboard et la page courante.
+ * Pré-cache toutes les pages essentielles + page courante.
  * @returns {Promise<{ cached: string[], failed: string[] }>}
  */
 export async function cacheAppShell() {
     const cached = [];
     const failed = [];
 
-    const paths = new Set([
-        ...APP_PAGES_TO_CACHE,
-        window.location.pathname,
-    ]);
+    const paths = new Set([...APP_PAGES_TO_CACHE, window.location.pathname]);
 
     for (const path of paths) {
         if (!path || path.startsWith('/api') || path === '/offline.html') {
@@ -94,13 +94,19 @@ export async function cacheAppShell() {
     localStorage.setItem('wmc_pages_cached_at', new Date().toISOString());
     localStorage.setItem('wmc_pages_cached_list', JSON.stringify(cached));
 
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'PRECACHE_APP_PAGES',
+            urls: cached,
+        });
+    }
+
     window.dispatchEvent(new CustomEvent('wmc-pages-cached', { detail: { cached, failed } }));
 
     return { cached, failed };
 }
 
 /**
- * Vérifier si une page est en cache.
  * @param {string} path
  * @returns {Promise<boolean>}
  */
@@ -112,16 +118,14 @@ export async function isPageCached(path) {
     const cache = await caches.open(PAGES_CACHE_NAME);
     const fullUrl = new URL(path, window.location.origin).href;
 
-    const hit =
+    return !!(
         (await cache.match(fullUrl)) ||
         (await cache.match(path)) ||
-        (await cache.match(new Request(fullUrl, { method: 'GET' })));
-
-    return !!hit;
+        (await cache.match(new Request(fullUrl, { method: 'GET' })))
+    );
 }
 
 /**
- * Si une page applicative est en cache, y rediriger (depuis offline.html).
  * @returns {Promise<boolean>}
  */
 export async function redirectToCachedAppPage() {
@@ -129,6 +133,7 @@ export async function redirectToCachedAppPage() {
         localStorage.getItem('wmc_last_app_route'),
         '/ventes/pos/interface',
         '/dashboard',
+        '/produits',
     ].filter(Boolean);
 
     for (const path of candidates) {

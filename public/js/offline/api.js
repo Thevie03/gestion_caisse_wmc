@@ -1,22 +1,25 @@
 /**
- * WMC CAISSE — Couche API offline
- *
- * Appels HTTP vers Laravel. Ne bloque pas sur navigator.onLine :
- * on tente toujours le fetch (utile en local avec Service Worker).
+ * WMC CAISSE — Couche API offline (timeouts courts)
  */
+
+import { NETWORK_TIMEOUT_MS } from './offline-config.js';
 
 export class WmcOfflineApi {
     constructor(options = {}) {
         this.bootstrapUrl = options.bootstrapUrl ?? '/api/offline/bootstrap';
         this.pingUrl = options.pingUrl ?? '/api/offline/ping';
         this.syncUrl = options.syncUrl ?? '/api/offline/sync';
+        this.defaultTimeout = options.timeout ?? NETWORK_TIMEOUT_MS;
     }
 
     getCsrfToken() {
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
     }
 
-    async request(url, options = {}) {
+    async fetchWithTimeout(url, options = {}, timeoutMs = this.defaultTimeout) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+
         const headers = new Headers(options.headers ?? {});
         headers.set('Accept', 'application/json');
         headers.set('X-Requested-With', 'XMLHttpRequest');
@@ -32,47 +35,35 @@ export class WmcOfflineApi {
                 headers,
                 credentials: 'same-origin',
                 cache: 'no-store',
+                signal: controller.signal,
             });
-
+            clearTimeout(timer);
             return response;
         } catch {
+            clearTimeout(timer);
             return null;
         }
     }
 
-    /** Ping — timeout court pour ne pas bloquer l'UI. */
+    async request(url, options = {}, timeoutMs = this.defaultTimeout) {
+        return this.fetchWithTimeout(url, options, timeoutMs);
+    }
+
     async ping() {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
-
+        const response = await this.fetchWithTimeout(this.pingUrl, { method: 'GET' }, 4000);
+        if (!response?.ok) {
+            return false;
+        }
         try {
-            const response = await fetch(this.pingUrl, {
-                method: 'GET',
-                credentials: 'same-origin',
-                cache: 'no-store',
-                headers: {
-                    Accept: 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeout);
-
-            if (!response.ok) {
-                return false;
-            }
-
             const data = await response.json();
             return data?.success === true;
         } catch {
-            clearTimeout(timeout);
             return false;
         }
     }
 
     async fetchBootstrap() {
-        const response = await this.request(this.bootstrapUrl, { method: 'GET' });
+        const response = await this.request(this.bootstrapUrl, { method: 'GET' }, 12000);
 
         if (!response) {
             return null;
@@ -99,11 +90,15 @@ export class WmcOfflineApi {
     }
 
     async postSync(operations) {
-        const response = await this.request(this.syncUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ operations }),
-        });
+        const response = await this.request(
+            this.syncUrl,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ operations }),
+            },
+            15000
+        );
 
         if (!response) {
             return null;

@@ -110,10 +110,6 @@ export class WmcOfflineCache {
      * @returns {Promise<boolean>} true si bootstrap réussi
      */
     async bootstrapIfNeeded(force = false) {
-        if (!navigator.onLine) {
-            return false;
-        }
-
         const status = await this.getBootstrapStatus();
 
         if (status.bootstrapped && !force) {

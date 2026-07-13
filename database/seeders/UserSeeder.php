@@ -37,44 +37,5 @@ class UserSeeder extends Seeder
             ]
         );
 
-        User::updateOrCreate(
-            ['email' => 'admin.global@gestioncaisse.com'],
-            [
-                'name' => 'Administrateur Global',
-                'password' => Hash::make('AdminGlobal@2025'),
-                'role' => 'admin',
-                'boutique_id' => null,
-                'telephone' => '+221 33 999 99 99',
-                'actif' => true,
-            ]
-        );
-
-        if ($cosmetica) {
-            User::updateOrCreate(
-                ['email' => 'employe@cosmetica.com'],
-                [
-                    'name' => 'Employé Cosmetica',
-                    'password' => Hash::make('Cosmetica@2025'),
-                    'role' => 'employe',
-                    'boutique_id' => $cosmetica->id,
-                    'telephone' => '+221 33 111 11 11',
-                    'actif' => true,
-                ]
-            );
-        }
-
-        if ($abaya) {
-            User::updateOrCreate(
-                ['email' => 'employe@abaya.com'],
-                [
-                    'name' => 'Employé Abaya',
-                    'password' => Hash::make('Abaya@2025'),
-                    'role' => 'employe',
-                    'boutique_id' => $abaya->id,
-                    'telephone' => '+221 33 222 22 22',
-                    'actif' => true,
-                ]
-            );
-        }
     }
 }

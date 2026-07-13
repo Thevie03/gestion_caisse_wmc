@@ -1929,7 +1929,7 @@
             overflow-y: auto !important;
         }
 
-        @media (min-width: 576px) {
+        @media (min-width: 768px) {
             .pos-layout {
                 flex-direction: row !important;
                 flex-wrap: nowrap !important;

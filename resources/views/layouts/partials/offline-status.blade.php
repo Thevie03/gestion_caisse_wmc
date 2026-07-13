@@ -1,7 +1,7 @@
 {{--
     WMC CAISSE — Indicateur de connexion (local + production)
 --}}
-<div class="wmc-offline-widget d-none d-md-flex align-items-center me-2" id="wmc-offline-widget">
+<div class="wmc-offline-widget d-none d-lg-flex align-items-center me-2" id="wmc-offline-widget">
     <div class="wmc-offline-status wmc-offline-status--online" id="wmc-offline-status" data-online="1" data-mode="online"
         title="État de la connexion">
         <span class="wmc-offline-status__dot" aria-hidden="true">🟢</span>
@@ -13,6 +13,10 @@
         <small class="wmc-offline-pending text-warning" id="wmc-offline-pending" hidden></small>
         <small class="wmc-offline-last-sync text-muted d-block" id="wmc-offline-last-sync">—</small>
     </div>
+</div>
+
+<div class="wmc-offline-mobile-dot d-lg-none me-1" id="wmc-offline-status-mobile" title="État de la connexion">
+    <span class="wmc-offline-status__dot" aria-hidden="true">🟢</span>
 </div>
 
 <div class="wmc-offline-progress wmc-offline-progress--topbar" id="wmc-offline-progress" hidden>
@@ -106,6 +110,20 @@
         color: var(--text-secondary, #9ca3af);
         font-size: 0.75rem;
     }
+
+    .wmc-offline-mobile-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        min-height: 32px;
+        flex-shrink: 0;
+    }
+
+    .wmc-offline-mobile-dot .wmc-offline-status__dot {
+        font-size: 0.85rem;
+        line-height: 1;
+    }
 </style>
 
 <script>
@@ -116,8 +134,9 @@
         function syncMobileIndicator() {
             if (!mobileEl || !desktopEl) return;
             const dot = desktopEl.querySelector('.wmc-offline-status__dot');
-            if (dot) {
-                mobileEl.querySelector('.wmc-offline-status__dot').textContent = dot.textContent;
+            const mobileDot = mobileEl.querySelector('.wmc-offline-status__dot');
+            if (dot && mobileDot) {
+                mobileDot.textContent = dot.textContent;
             }
             if (desktopEl.title) {
                 mobileEl.title = desktopEl.title;

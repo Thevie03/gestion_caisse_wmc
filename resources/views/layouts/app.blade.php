@@ -54,6 +54,7 @@ $htmlClasses = [];
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/pwa-responsive.css') }}?v=1.1.0">
 
     <!-- Chart.js (chargé dans le head pour être disponible tôt) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
@@ -62,7 +63,7 @@ $htmlClasses = [];
 
 <body>
     <!-- Overlay pour fermer la sidebar sur mobile -->
-    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+    <div class="sidebar-overlay" aria-hidden="true"></div>
 
     <div class="d-flex flex-column flex-md-row app-wrapper">
         <!-- Sidebar -->
@@ -179,7 +180,7 @@ $htmlClasses = [];
                 @endphp
 
                 @if ($showContextHero)
-                    <section class="wmc-context-hero mb-4">
+                    <section class="wmc-context-hero context-hero mb-4">
                         <div class="row g-0 overflow-hidden rounded-4 border wmc-context-hero-shell">
                             <div
                                 class="col-12 col-lg-5 p-4 p-lg-5 d-flex flex-column justify-content-center wmc-context-hero-left">
@@ -278,59 +279,7 @@ $htmlClasses = [];
         </div>
     </div>
 
-    <!-- Mobile Sidebar Toggle Script -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const sidebarOverlay = document.querySelector('.sidebar-overlay');
-
-            if (sidebarToggle && sidebar) {
-                sidebarToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    sidebar.classList.add('show');
-                    if (sidebarOverlay) {
-                        sidebarOverlay.classList.add('show');
-                    }
-                });
-            }
-
-            // Fermer la sidebar en cliquant sur l'overlay
-            if (sidebarOverlay) {
-                sidebarOverlay.addEventListener('click', function() {
-                    closeSidebar();
-                });
-            }
-
-            // Fermer la sidebar en cliquant sur un lien
-            const sidebarLinks = sidebar.querySelectorAll('.nav-link');
-            sidebarLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    if (window.innerWidth < 768) {
-                        closeSidebar();
-                    }
-                });
-            });
-        });
-
-        function closeSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const sidebarOverlay = document.querySelector('.sidebar-overlay');
-            if (sidebar) {
-                sidebar.classList.remove('show');
-            }
-            if (sidebarOverlay) {
-                sidebarOverlay.classList.remove('show');
-            }
-        }
-
-        // Fermer la sidebar au redimensionnement vers desktop
-        window.addEventListener('resize', function() {
-            if (window.innerWidth >= 768) {
-                closeSidebar();
-            }
-        });
-    </script>
+    <script src="{{ asset('js/sidebar-mobile.js') }}?v=1.0.0"></script>
 
     <!-- Optimisation : Charger les scripts de manière asynchrone pour améliorer les performances -->
     <!-- Bootstrap JS -->
@@ -615,7 +564,7 @@ $htmlClasses = [];
     </script>
 
     {{-- PWA : enregistrement Service Worker + bannière d'installation --}}
-    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.5" defer></script>
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.4.0" defer></script>
     @include('layouts.partials.pwa-scripts')
 
     {{-- Mode hors connexion : IndexedDB + bootstrap (Étape 2) --}}

@@ -5,7 +5,7 @@
     <!-- En-tête avec bouton d'ajout -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center wmc-page-header">
                 <div>
                     <h2 class="mb-0">
                         <i class="fas fa-users me-2 text-primary"></i>
@@ -23,7 +23,7 @@
 
     <!-- Statistiques -->
     <div class="row mb-4">
-        <div class="col-md-4 mb-3">
+        <div class="col-12 col-md-4 mb-3">
             <div class="card stat-card">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
@@ -37,7 +37,7 @@
             </div>
         </div>
 
-        <div class="col-md-4 mb-3">
+        <div class="col-12 col-md-4 mb-3">
             <div class="card stat-card bg-success text-white">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">
@@ -51,7 +51,7 @@
             </div>
         </div>
 
-        <div class="col-md-4 mb-3">
+        <div class="col-12 col-md-4 mb-3">
             <div class="card stat-card bg-warning text-white">
                 <div class="d-flex align-items-center">
                     <div class="flex-grow-1">

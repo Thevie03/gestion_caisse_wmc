@@ -294,11 +294,10 @@
                                                 <td>
                                                     @if ($produit->image)
                                                         <img src="{{ asset($produit->image) }}"
-                                                            alt="{{ $produit->nom }}" class="rounded shadow-sm"
-                                                            style="width: 60px; height: 60px; object-fit: cover; border: 1px solid #dee2e6;">
+                                                            alt="{{ $produit->nom }}"
+                                                            class="rounded shadow-sm wmc-table-thumb">
                                                     @else
-                                                <div class="rounded d-flex align-items-center justify-content-center shadow-sm"
-                                                            style="width: 60px; height: 60px; border: 1px solid #dee2e6;">
+                                                <div class="rounded d-flex align-items-center justify-content-center shadow-sm wmc-table-thumb wmc-table-thumb--placeholder">
                                                             <i class="fas fa-image text-muted fa-lg"></i>
                                                         </div>
                                                     @endif
@@ -393,11 +392,9 @@
                                         <td>
                                             @if ($produit->image)
                                                 <img src="{{ asset($produit->image) }}" alt="{{ $produit->nom }}"
-                                                    class="rounded shadow-sm"
-                                                    style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #dee2e6;">
+                                                    class="rounded shadow-sm wmc-table-thumb">
                                             @else
-                                                <div class="rounded d-flex align-items-center justify-content-center shadow-sm"
-                                                    style="width: 70px; height: 70px; border: 1px solid #dee2e6;">
+                                                <div class="rounded d-flex align-items-center justify-content-center shadow-sm wmc-table-thumb wmc-table-thumb--placeholder">
                                                     <i class="fas fa-image text-muted fa-lg"></i>
                                                 </div>
                                             @endif

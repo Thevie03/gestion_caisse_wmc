@@ -239,7 +239,9 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="ventesChart" height="100"></canvas>
+                    <div class="chart-container">
+                        <canvas id="ventesChart" height="100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -253,7 +255,9 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="produitsChart"></canvas>
+                    <div class="chart-container">
+                        <canvas id="produitsChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>

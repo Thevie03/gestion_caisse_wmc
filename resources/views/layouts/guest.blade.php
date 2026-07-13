@@ -31,6 +31,7 @@
         $cssVersion = file_exists(public_path('css/app.css')) ? filemtime(public_path('css/app.css')) : time();
     @endphp
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ $cssVersion }}">
+    <link rel="stylesheet" href="{{ asset('css/pwa-responsive.css') }}?v=1.1.0">
 
     <!-- Styles critiques inline pour garantir l'affichage -->
     <style>
@@ -104,7 +105,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" crossorigin="anonymous"></script>
 
     {{-- PWA : enregistrement Service Worker --}}
-    <script src="{{ asset('js/pwa-register.js') }}?v=1.3.5" defer></script>
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.4.0" defer></script>
     @include('layouts.partials.offline-scripts')
 </body>
 

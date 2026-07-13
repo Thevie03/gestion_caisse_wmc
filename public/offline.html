@@ -86,7 +86,8 @@
     </div>
 
     <script type="module">
-        const PAGES_CACHE = 'wmc-caisse-v1.3.4-pages';
+        const PAGES_CACHE = 'wmc-caisse-v1.4.0-pages';
+        const PING_TIMEOUT_MS = 3500;
         const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 
         if (isLocal) {
@@ -100,22 +101,34 @@
             return !!(await cache.match(url) || await cache.match(path));
         }
 
+        async function pingServer() {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+            try {
+                const r = await fetch('/api/offline/ping', {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    signal: controller.signal,
+                });
+                clearTimeout(timer);
+                return r.ok;
+            } catch {
+                clearTimeout(timer);
+                return false;
+            }
+        }
+
         async function checkServer() {
             const line = document.getElementById('status-line');
             const msg = document.getElementById('main-message');
 
-            try {
-                const r = await fetch('/api/offline/ping', { credentials: 'same-origin', cache: 'no-store' });
-                if (r.ok) {
-                    line.innerHTML = '<span class="ok">✓ Serveur Laravel répond</span> — redirection…';
-                    msg.textContent = 'Le serveur est de retour. Redirection vers l\'application…';
-                    setTimeout(() => {
-                        location.href = localStorage.getItem('wmc_last_app_route') || '/dashboard';
-                    }, 800);
-                    return;
-                }
-            } catch {
-                // ignore
+            if (await pingServer()) {
+                line.innerHTML = '<span class="ok">✓ Serveur Laravel répond</span> — redirection…';
+                msg.textContent = 'Le serveur est de retour. Redirection vers l\'application…';
+                setTimeout(() => {
+                    location.href = localStorage.getItem('wmc_last_app_route') || '/dashboard';
+                }, 800);
+                return;
             }
 
             if (isLocal && navigator.onLine) {

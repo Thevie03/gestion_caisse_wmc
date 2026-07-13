@@ -15,14 +15,15 @@
     <div class="container-fluid">
         <div class="row align-items-center">
             <!-- Mobile Menu Toggle -->
-            <div class="col-auto d-md-none">
-                <button id="sidebarToggle" class="btn btn-link text-dark">
-                    <i class="fas fa-bars"></i>
+            <div class="col-auto d-lg-none">
+                <button type="button" id="sidebarToggle" class="wmc-sidebar-toggle" data-sidebar-toggle
+                    aria-label="Ouvrir le menu de navigation" aria-expanded="false" aria-controls="sidebar">
+                    <i class="fas fa-bars" aria-hidden="true"></i>
                 </button>
             </div>
 
-            <!-- Logo Mobile -->
-            <div class="col-auto d-md-none">
+            <!-- Logo Mobile (masqué — topbar compacte via pwa-responsive.css) -->
+            <div class="col-auto d-lg-none topbar-mobile-logo">
                 <div class="d-inline-block">
                     @if ($resolvedLogo)
                         <img src="{{ $resolvedLogo }}" alt="Logo {{ $resolvedBoutiqueName }}"
@@ -34,13 +35,8 @@
                 </div>
             </div>
 
-            <!-- Statut connexion mobile -->
-            <div class="col-auto d-md-none ms-auto" id="wmc-offline-status-mobile" title="État de la connexion">
-                <span class="wmc-offline-status__dot" aria-hidden="true">🟢</span>
-            </div>
-
             <!-- Logo Desktop -->
-            <div class="col-auto d-none d-md-block">
+            <div class="col-auto d-none d-lg-block">
                 <div class="d-inline-block">
                     @if ($resolvedLogo)
                         <img src="{{ $resolvedLogo }}" alt="Logo {{ $resolvedBoutiqueName }}"
@@ -54,17 +50,17 @@
 
             <!-- Page Title + Search -->
             <div class="col topbar-center-col">
-                <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 topbar-center">
+                <div class="d-flex flex-row align-items-center gap-2 topbar-center w-100">
                     <h1 class="h4 mb-0 text-dark text-truncate">
                         @yield('page-title', $resolvedBoutiqueName ?? config('app.name', 'GestionCaisse'))
                     </h1>
                     <!-- Search (UI uniquement) -->
-                    <div class="topbar-search d-none d-md-inline-flex ms-md-3">
+                    <div class="topbar-search d-none d-lg-inline-flex ms-lg-3">
                         <i class="fas fa-search"></i>
                         <input type="text" placeholder="Rechercher (produits, clients, ventes)…">
                     </div>
-                    <!-- Right Side (desktop) -->
-                    <div class="topbar-inline-tools d-none d-md-flex align-items-center">
+                    <!-- Outils (desktop + mobile compact) -->
+                    <div class="topbar-inline-tools d-flex align-items-center ms-auto flex-shrink-0">
                         <!-- Boutique Selector (Propriétaires avec plusieurs boutiques et Super Admin) -->
                         @auth
                             @php

@@ -1,5 +1,5 @@
 /**
- * WMC CAISSE — Initialisation mode hors connexion
+ * WMC CAISSE — Initialisation mode hors connexion (Offline-First)
  */
 
 import { offlineDb } from './indexeddb.js';
@@ -7,7 +7,8 @@ import { offlineNetwork } from './network.js';
 import { offlineApi } from './api.js';
 import { offlineCache } from './cache.js';
 import { offlineSync } from './sync.js';
-import { cacheAppShell, isPageCached, PAGES_CACHE_NAME } from './pages-cache.js';
+import { cacheAppShell, isPageCached, PAGES_CACHE_NAME, APP_PAGES_TO_CACHE } from './pages-cache.js';
+import { offlineHydrate } from './hydrate.js';
 
 const statusEl = document.getElementById('wmc-offline-status');
 const hintEl = document.getElementById('wmc-offline-hint');
@@ -17,10 +18,10 @@ const progressEl = document.getElementById('wmc-offline-progress');
 const progressBarEl = document.getElementById('wmc-offline-progress-bar');
 const progressTextEl = document.getElementById('wmc-offline-progress-text');
 
-/**
- * Mettre à jour l'indicateur (3 états : online / offline / server_down).
- * @param {import('./network.js').ConnectionMode} [mode]
- */
+function notifySwOffline(force) {
+    offlineHydrate.notifyServiceWorkerOffline(force);
+}
+
 function updateStatusUI(mode) {
     if (!statusEl) return;
 
@@ -49,6 +50,7 @@ function updateStatusUI(mode) {
     }
 
     statusEl.title = display.hint;
+    notifySwOffline(!isOnline);
 
     if (offlineNetwork.isLocalDev()) {
         updateCacheHint();
@@ -58,16 +60,17 @@ function updateStatusUI(mode) {
 async function updateCacheHint() {
     if (!hintEl || !offlineNetwork.isLocalDev()) return;
 
-    const pos = await isPageCached('/ventes/pos/interface');
-    const dash = await isPageCached('/dashboard');
-    const parts = [];
-    if (pos) parts.push('POS');
-    if (dash) parts.push('dashboard');
-    const cacheNote = parts.length
-        ? ` — ${parts.join(' + ')} en cache`
-        : ' — visitez POS/dashboard en ligne pour le cache';
+    let cachedCount = 0;
+    for (const path of APP_PAGES_TO_CACHE.slice(0, 4)) {
+        if (await isPageCached(path)) cachedCount += 1;
+    }
 
     const display = offlineNetwork.getStatusDisplay();
+    const cacheNote =
+        cachedCount > 0
+            ? ` — ${cachedCount}+ pages en cache`
+            : ' — visitez l\'app en ligne pour le cache';
+
     hintEl.textContent = display.hint + cacheNote;
 }
 
@@ -140,6 +143,7 @@ async function rememberAndCacheCurrentRoute() {
 }
 
 async function onServerOnline() {
+    notifySwOffline(false);
     await offlineCache.bootstrapIfNeeded(false);
     await rememberAndCacheCurrentRoute();
     await offlineSync.syncAll();
@@ -155,7 +159,9 @@ async function init() {
         return;
     }
 
-    offlineNetwork.startMonitoring(() => offlineApi.ping(), 15000);
+    offlineHydrate.startHydrationListener();
+
+    offlineNetwork.startMonitoring(() => offlineApi.ping(), 8000);
 
     await offlineNetwork.checkServerReachability();
     updateStatusUI(offlineNetwork.getMode());
@@ -187,6 +193,9 @@ async function init() {
         if (offlineNetwork.isFullyOnline()) {
             await cacheAppShell();
         }
+        if (!offlineNetwork.isFullyOnline()) {
+            await offlineHydrate.hydrateCurrentPage();
+        }
     });
 
     window.addEventListener('wmc-offline-pending-change', () => updatePendingUI());
@@ -205,6 +214,7 @@ async function init() {
         await onServerOnline();
     } else {
         localStorage.setItem('wmc_last_app_route', window.location.pathname);
+        await offlineHydrate.hydrateCurrentPage();
     }
 }
 
@@ -214,8 +224,8 @@ window.WmcOffline = {
     api: offlineApi,
     cache: offlineCache,
     sync: offlineSync,
-    pagesCache: { cacheAppShell, isPageCached, PAGES_CACHE_NAME },
-    /** Utiliser pour savoir si on doit travailler en mode local (POS, etc.) */
+    hydrate: offlineHydrate,
+    pagesCache: { cacheAppShell, isPageCached, PAGES_CACHE_NAME, APP_PAGES_TO_CACHE },
     canUseLocalData: () => !offlineNetwork.isFullyOnline(),
 };
 

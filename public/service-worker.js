@@ -1,29 +1,48 @@
 /**
- * WMC CAISSE — Service Worker
+ * WMC CAISSE — Service Worker v1.4.0 (Offline-First)
  *
  * Stratégies :
- * - Assets statiques / CDN : cache-first
- * - Pages applicatives : network-first + cache (app shell offline)
- * - API : réseau uniquement
+ * - CSS / JS / images / polices / manifest → cache-first (+ timeout réseau)
+ * - Navigation HTML → cache-first si mode offline forcé ; sinon stale-while-revalidate (timeout 3,5 s)
+ * - API Laravel → network-first avec timeout court, JSON 503 si échec
  */
 
-const CACHE_VERSION = 'wmc-caisse-v1.3.5';
+const CACHE_VERSION = 'wmc-caisse-v1.4.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const PAGES_CACHE = `${CACHE_VERSION}-pages`;
 
-/** Pages prioritaires pour le mode hors connexion */
-const OFFLINE_FALLBACK_ROUTES = [
-    '/ventes/pos/interface',
+const NAV_TIMEOUT_MS = 3500;
+const ASSET_TIMEOUT_MS = 4000;
+const API_TIMEOUT_MS = 3500;
+
+/** Signal du client : ne jamais attendre le réseau pour la navigation */
+let forceOfflineNavigation = false;
+
+const APP_PAGES_TO_CACHE = [
     '/dashboard',
-    '/login',
+    '/ventes/pos/interface',
+    '/produits',
+    '/categories',
+    '/clients',
+    '/fournisseurs',
+    '/stock',
+    '/depenses',
+    '/rapports',
+    '/profile',
+    '/ventes',
 ];
+
+const OFFLINE_FALLBACK_ROUTES = [...APP_PAGES_TO_CACHE, '/login'];
 
 const PRECACHE_URLS = [
     '/offline.html',
     '/css/app.css',
+    '/css/pwa-responsive.css',
     '/manifest.json',
     '/js/pwa-register.js',
+    '/js/sidebar-mobile.js',
+    '/js/offline/offline-config.js',
     '/js/offline/init.js',
     '/js/offline/indexeddb.js',
     '/js/offline/network.js',
@@ -32,6 +51,7 @@ const PRECACHE_URLS = [
     '/js/offline/sync.js',
     '/js/offline/ticket.js',
     '/js/offline/pages-cache.js',
+    '/js/offline/hydrate.js',
     '/images/logos/logo_wmc_orange.png',
 ];
 
@@ -43,36 +63,27 @@ const CDN_ORIGINS = [
 
 const KEEP_CACHES = new Set([STATIC_CACHE, RUNTIME_CACHE, PAGES_CACHE]);
 
-// ─── Installation ───────────────────────────────────────────────────────────
+// ─── Utilitaires ──────────────────────────────────────────────────────────────
 
-self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches
-            .open(STATIC_CACHE)
-            .then((cache) => cache.addAll(PRECACHE_URLS))
-            .then(() => self.skipWaiting())
-            .catch((error) => console.warn('[SW] Échec du pré-cache :', error))
-    );
-});
+function fetchWithTimeout(request, timeoutMs) {
+    return new Promise((resolve, reject) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+            controller.abort();
+            reject(new Error('NETWORK_TIMEOUT'));
+        }, timeoutMs);
 
-// ─── Activation ─────────────────────────────────────────────────────────────
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches
-            .keys()
-            .then((keys) =>
-                Promise.all(
-                    keys
-                        .filter((key) => key.startsWith('wmc-caisse-') && !KEEP_CACHES.has(key))
-                        .map((key) => caches.delete(key))
-                )
-            )
-            .then(() => self.clients.claim())
-    );
-});
-
-// ─── Helpers cache pages ──────────────────────────────────────────────────────
+        fetch(request, { credentials: 'include', redirect: 'follow', signal: controller.signal })
+            .then((response) => {
+                clearTimeout(timer);
+                resolve(response);
+            })
+            .catch((err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+}
 
 function isHtmlResponse(response) {
     const type = response.headers.get('content-type') || '';
@@ -97,41 +108,19 @@ async function putPageInCache(request, response) {
     await cache.put(url.href, response.clone());
 }
 
-/**
- * Correspondance exacte uniquement (même URL que la page demandée).
- * Ne jamais renvoyer une autre page (ex. POS) pour une URL différente.
- */
 async function matchExactCachedPage(request) {
     const cache = await caches.open(PAGES_CACHE);
-
-    let cached = await cache.match(request);
-    if (cached) {
-        return cached;
-    }
-
     const url = new URL(request.url);
-    cached = await cache.match(pageCacheKey(url));
-    if (cached) {
-        return cached;
-    }
 
-    cached = await cache.match(url.pathname);
-    if (cached) {
-        return cached;
-    }
-
-    cached = await cache.match(url.href);
-    if (cached) {
-        return cached;
-    }
-
-    return null;
+    return (
+        (await cache.match(request)) ||
+        (await cache.match(pageCacheKey(url))) ||
+        (await cache.match(url.pathname)) ||
+        (await cache.match(url.href)) ||
+        null
+    );
 }
 
-/**
- * Fallback hors connexion : page demandée si en cache, sinon offline.html.
- * On ne sert plus le POS/dashboard pour toutes les URLs.
- */
 async function matchOfflineFallbackPage(request) {
     const exact = await matchExactCachedPage(request);
     if (exact) {
@@ -153,62 +142,6 @@ async function matchOfflineFallbackPage(request) {
     return null;
 }
 
-async function precacheAppUrls(urls) {
-    const cache = await caches.open(PAGES_CACHE);
-
-    for (const path of urls) {
-        try {
-            const response = await fetch(path, { credentials: 'include', redirect: 'follow' });
-            if (response.ok && isHtmlResponse(response)) {
-                const request = new Request(new URL(path, self.location.origin).toString());
-                await cache.put(request, response.clone());
-            }
-        } catch (error) {
-            console.warn('[SW] Pré-cache page ignoré :', path, error);
-        }
-    }
-}
-
-// ─── Stratégies fetch ─────────────────────────────────────────────────────────
-
-async function cacheFirst(request, cacheName) {
-    const cached = await caches.match(request);
-    if (cached) {
-        return cached;
-    }
-
-    const response = await fetch(request);
-    if (response.ok) {
-        const cache = await caches.open(cacheName);
-        cache.put(request, response.clone());
-    }
-    return response;
-}
-
-/**
- * Navigation : réseau d'abord (comportement normal Laravel).
- * Cache uniquement si le réseau échoue (mode hors connexion).
- */
-async function handleNavigation(request) {
-    try {
-        const response = await fetch(request, { credentials: 'include', redirect: 'follow' });
-
-        if (response.ok && isHtmlResponse(response)) {
-            await putPageInCache(request, response);
-        }
-
-        return response;
-    } catch {
-        const fallback = await matchOfflineFallbackPage(request);
-        if (fallback) {
-            return fallback;
-        }
-
-        return await getOfflineFallbackResponse();
-    }
-}
-
-/** Toujours retourner offline.html plutôt qu'une erreur navigateur (ERR_FAILED). */
 async function getOfflineFallbackResponse() {
     const offlinePage =
         (await caches.match('/offline.html')) ||
@@ -219,13 +152,99 @@ async function getOfflineFallbackResponse() {
     }
 
     return new Response(
-        '<!DOCTYPE html><html><body><h1>Hors connexion</h1><p>Rechargez quand le réseau revient.</p></body></html>',
+        '<!DOCTYPE html><html lang="fr"><body><h1>Hors connexion</h1><p>Reconnectez-vous pour synchroniser.</p><a href="/offline.html">Page offline</a></body></html>',
         { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     );
 }
 
-async function networkOnly(request) {
-    return fetch(request);
+async function precacheAppUrls(urls) {
+    for (const path of urls) {
+        try {
+            const response = await fetchWithTimeout(
+                new Request(new URL(path, self.location.origin).toString(), { credentials: 'include' }),
+                NAV_TIMEOUT_MS
+            );
+            if (response.ok && isHtmlResponse(response)) {
+                await putPageInCache(new Request(path), response);
+            }
+        } catch (error) {
+            console.warn('[SW] Pré-cache ignoré :', path, error.message);
+        }
+    }
+}
+
+// ─── Stratégies ───────────────────────────────────────────────────────────────
+
+async function cacheFirst(request, cacheName, timeoutMs = ASSET_TIMEOUT_MS) {
+    const cached = await caches.match(request);
+    if (cached) {
+        return cached;
+    }
+
+    try {
+        const response = await fetchWithTimeout(request, timeoutMs);
+        if (response.ok) {
+            const cache = await caches.open(cacheName);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        return cached || new Response('', { status: 504, statusText: 'Offline' });
+    }
+}
+
+/**
+ * Navigation offline-first :
+ * - mode offline forcé → cache immédiat
+ * - cache existant → réponse immédiate + revalidation arrière-plan
+ * - sans cache → réseau avec timeout court → fallback cache / offline.html
+ */
+async function handleNavigation(request) {
+    const cached = await matchExactCachedPage(request);
+
+    if (forceOfflineNavigation) {
+        if (cached) {
+            return cached;
+        }
+        const fallback = await matchOfflineFallbackPage(request);
+        return fallback || (await getOfflineFallbackResponse());
+    }
+
+    if (cached) {
+        fetchWithTimeout(request, NAV_TIMEOUT_MS)
+            .then(async (response) => {
+                if (response?.ok && isHtmlResponse(response)) {
+                    await putPageInCache(request, response);
+                }
+            })
+            .catch(() => {});
+        return cached;
+    }
+
+    try {
+        const response = await fetchWithTimeout(request, NAV_TIMEOUT_MS);
+        if (response.ok && isHtmlResponse(response)) {
+            await putPageInCache(request, response);
+        }
+        return response;
+    } catch {
+        const fallback = await matchOfflineFallbackPage(request);
+        if (fallback) {
+            return fallback;
+        }
+        return getOfflineFallbackResponse();
+    }
+}
+
+async function handleApiRequest(request) {
+    try {
+        return await fetchWithTimeout(request, API_TIMEOUT_MS);
+    } catch {
+        return Response.json(
+            { success: false, offline: true, message: 'Serveur inaccessible' },
+            { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+    }
 }
 
 function isStaticAsset(url) {
@@ -257,7 +276,32 @@ function isLocalDevHost(url) {
     return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
 }
 
-// ─── Fetch ────────────────────────────────────────────────────────────────────
+// ─── Cycle de vie ─────────────────────────────────────────────────────────────
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches
+            .open(STATIC_CACHE)
+            .then((cache) => cache.addAll(PRECACHE_URLS))
+            .then(() => self.skipWaiting())
+            .catch((error) => console.warn('[SW] Pré-cache partiel :', error))
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches
+            .keys()
+            .then((keys) =>
+                Promise.all(
+                    keys
+                        .filter((key) => key.startsWith('wmc-caisse-') && !KEEP_CACHES.has(key))
+                        .map((key) => caches.delete(key))
+                )
+            )
+            .then(() => self.clients.claim())
+    );
+});
 
 self.addEventListener('fetch', (event) => {
     const { request } = event;
@@ -268,7 +312,6 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(request.url);
 
-    // En local : ne jamais intercepter — Laravel répond directement (évite ERR_FAILED).
     if (isLocalDevHost(url)) {
         return;
     }
@@ -278,44 +321,29 @@ self.addEventListener('fetch', (event) => {
     }
 
     if (isApiRequest(url)) {
-        event.respondWith(
-            networkOnly(request).catch(() =>
-                Response.json(
-                    { success: false, offline: true, message: 'Serveur inaccessible' },
-                    { status: 503, headers: { 'Content-Type': 'application/json' } }
-                )
-            )
-        );
+        event.respondWith(handleApiRequest(request));
         return;
     }
 
     if (isStaticAsset(url) && url.origin === self.location.origin) {
-        event.respondWith(
-            cacheFirst(request, STATIC_CACHE).catch(() => caches.match(request))
-        );
+        event.respondWith(cacheFirst(request, STATIC_CACHE));
         return;
     }
 
     if (isCdnAsset(url)) {
-        event.respondWith(
-            cacheFirst(request, RUNTIME_CACHE).catch(() => caches.match(request))
-        );
+        event.respondWith(cacheFirst(request, RUNTIME_CACHE));
         return;
     }
 
     if (isNavigationRequest(request)) {
-        event.respondWith(
-            handleNavigation(request).catch(() => getOfflineFallbackResponse())
-        );
+        event.respondWith(handleNavigation(request));
         return;
     }
 
     event.respondWith(
-        networkOnly(request).catch(async () => (await caches.match(request)) || new Response('', { status: 504 }))
+        cacheFirst(request, RUNTIME_CACHE).catch(async () => (await caches.match(request)) || new Response('', { status: 504 }))
     );
 });
-
-// ─── Messages ─────────────────────────────────────────────────────────────────
 
 self.addEventListener('message', (event) => {
     if (!event.data) {
@@ -327,7 +355,11 @@ self.addEventListener('message', (event) => {
     }
 
     if (event.data.type === 'GET_VERSION') {
-        event.source.postMessage({ type: 'VERSION', version: CACHE_VERSION });
+        event.source?.postMessage({ type: 'VERSION', version: CACHE_VERSION });
+    }
+
+    if (event.data.type === 'SET_FORCE_OFFLINE') {
+        forceOfflineNavigation = !!event.data.value;
     }
 
     if (event.data.type === 'TRIGGER_SYNC') {
@@ -338,7 +370,7 @@ self.addEventListener('message', (event) => {
         const pageUrl = event.data.url;
         if (pageUrl) {
             event.waitUntil(
-                fetch(pageUrl, { credentials: 'include', redirect: 'follow' })
+                fetchWithTimeout(new Request(pageUrl, { credentials: 'include' }), NAV_TIMEOUT_MS)
                     .then((response) => {
                         if (response.ok && isHtmlResponse(response)) {
                             return putPageInCache(new Request(pageUrl), response);
@@ -350,12 +382,10 @@ self.addEventListener('message', (event) => {
     }
 
     if (event.data.type === 'PRECACHE_APP_PAGES') {
-        const urls = event.data.urls || OFFLINE_FALLBACK_ROUTES;
+        const urls = event.data.urls || APP_PAGES_TO_CACHE;
         event.waitUntil(precacheAppUrls(urls));
     }
 });
-
-// ─── Background Sync ──────────────────────────────────────────────────────────
 
 self.addEventListener('sync', (event) => {
     if (event.tag === 'wmc-offline-sync') {
