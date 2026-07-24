@@ -100,7 +100,33 @@
         });
     }
 
+    function applyIosSafeAreaInsets() {
+        var isApple = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true;
+
+        if (!isApple) {
+            return;
+        }
+
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:fixed;top:0;left:0;padding:env(safe-area-inset-top);visibility:hidden;pointer-events:none;';
+        document.body.appendChild(probe);
+        var measured = parseFloat(window.getComputedStyle(probe).paddingTop) || 0;
+        document.body.removeChild(probe);
+
+        var fallback = isStandalone ? 59 : 47;
+        var effective = Math.max(measured, fallback);
+
+        document.documentElement.style.setProperty('--wmc-safe-top-effective', effective + 'px');
+    }
+
     function init() {
+        applyIosSafeAreaInsets();
+        window.addEventListener('orientationchange', function () {
+            setTimeout(applyIosSafeAreaInsets, 150);
+        });
+
         document.addEventListener('click', handleToggleEvent, true);
         document.addEventListener('touchend', handleToggleEvent, { passive: false, capture: true });
 

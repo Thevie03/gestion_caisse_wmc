@@ -20,11 +20,8 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {{-- Bootstrap, Font Awesome — hébergés localement --}}
+    @include('layouts.partials.vendor-styles')
 
     <!-- Custom CSS -->
     @php
@@ -96,16 +93,12 @@
     style="margin: 0; padding: 0; overflow-x: hidden; height: 100%; width: 100%;">
     {{ $slot }}
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous">
-    </script>
-
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" crossorigin="anonymous"></script>
+    {{-- Bootstrap JS + Alpine.js — hébergés localement --}}
+    @include('layouts.partials.vendor-scripts')
 
     {{-- PWA : enregistrement Service Worker --}}
-    <script src="{{ asset('js/pwa-register.js') }}?v=1.4.0" defer></script>
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.4.1" defer></script>
+    @include('layouts.partials.pwa-scripts')
     @include('layouts.partials.offline-scripts')
 </body>
 

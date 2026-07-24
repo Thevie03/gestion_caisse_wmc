@@ -28,10 +28,9 @@ class TestPdfController extends Controller
             return $pdf->download('test_rapport.pdf');
 
         } catch (\Exception $e) {
-            \Log::error('Erreur PDF test: ' . $e->getMessage());
+            \Log::error('Erreur PDF test: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => 'Impossible de générer le PDF de test.',
             ], 500);
         }
     }

@@ -203,8 +203,12 @@ class NotificationController extends Controller
      */
     public function api(Request $request)
     {
+        $validated = $request->validate([
+            'limite' => 'nullable|integer|min:1|max:50',
+        ]);
+
         $user = auth()->user();
-        $limite = $request->get('limite', 10);
+        $limite = $validated['limite'] ?? 10;
 
         $notifications = NotificationService::getNotifications($user->id, $limite);
         $nonLues = NotificationService::compterNonLues($user->id);

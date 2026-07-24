@@ -23,10 +23,27 @@ use Illuminate\Support\Facades\Route;
 // Landing page (publique, redirige vers dashboard si déjà connecté)
 Route::get('/', [App\Http\Controllers\WelcomeController::class, 'index'])->name('welcome')->middleware('guest');
 
+// Point d'entrée PWA (mobile + desktop) — page publique, sans authentification requise
+Route::get('/app', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return redirect()->route('login', ['source' => 'pwa']);
+})->name('pwa.launch');
+
+// Manifest PWA (URLs absolues — start_url = /app)
+Route::get('/manifest.json', [App\Http\Controllers\PwaManifestController::class, 'show'])
+    ->name('pwa.manifest');
+
 // Route pour rafraîchir le token CSRF (utilisateurs authentifiés uniquement)
 Route::get('/csrf-token', function () {
     return response()->json(['csrf_token' => csrf_token()]);
 })->middleware(['web', 'auth', 'throttle:30,1']);
+
+// Ping léger PWA — public (aucune donnée sensible), pour détecter si Laravel répond
+Route::get('/api/offline/ping', [App\Http\Controllers\Api\OfflineBootstrapController::class, 'ping'])
+    ->name('api.offline.ping');
 
 // Routes protégées par authentification
 Route::middleware(['auth', 'verified', 'theme', 'subscription', 'tenant'])->group(function () {
@@ -131,8 +148,6 @@ Route::middleware(['auth', 'verified', 'theme', 'subscription', 'tenant'])->grou
     Route::prefix('api/offline')->name('api.offline.')->group(function () {
         Route::get('/bootstrap', [App\Http\Controllers\Api\OfflineBootstrapController::class, 'bootstrap'])
             ->name('bootstrap');
-        Route::get('/ping', [App\Http\Controllers\Api\OfflineBootstrapController::class, 'ping'])
-            ->name('ping');
         Route::post('/sync', [App\Http\Controllers\Api\OfflineSyncController::class, 'sync'])
             ->name('sync');
         Route::post('/ventes', [App\Http\Controllers\Api\OfflineSyncController::class, 'syncVente'])

@@ -25,11 +25,17 @@ class UserSeeder extends Seeder
             ->where('email', '!=', 'support@wmcci.com')
             ->update(['role' => 'admin']);
 
+        $superAdminPassword = env('SUPER_ADMIN_PASSWORD');
+        if (empty($superAdminPassword)) {
+            $this->command?->warn('SUPER_ADMIN_PASSWORD non défini — super admin non créé. Utilisez : php artisan super-admin:create');
+            return;
+        }
+
         User::updateOrCreate(
             ['email' => 'support@wmcci.com'],
             [
                 'name' => 'Support WMC',
-                'password' => Hash::make('Support@2026'),
+                'password' => Hash::make($superAdminPassword),
                 'role' => 'super_admin',
                 'boutique_id' => null,
                 'telephone' => '+221 33 000 00 00',

@@ -36,28 +36,19 @@ $htmlClasses = [];
     {{-- PWA : manifest, meta tags iOS/Android --}}
     @include('layouts.partials.pwa-head')
 
-    <!-- Optimisation : Preconnect aux CDN pour améliorer les temps de chargement -->
+    <!-- Optimisation : Preconnect aux polices externes -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
     <!-- Fonts (avec display=swap pour éviter le blocage de rendu) -->
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
 
-    <!-- Font Awesome (avec crossorigin pour la sécurité) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        crossorigin="anonymous">
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
-        crossorigin="anonymous">
+    {{-- Bootstrap, Font Awesome — hébergés localement (first-party) --}}
+    @include('layouts.partials.vendor-styles')
+    <script src="{{ asset('vendor/chartjs/chart.umd.min.js') }}?v=4.4.0"></script>
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/pwa-responsive.css') }}?v=1.1.0">
-
-    <!-- Chart.js (chargé dans le head pour être disponible tôt) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="{{ asset('css/pwa-responsive.css') }}?v=1.2.0">
 
 </head>
 
@@ -279,48 +270,26 @@ $htmlClasses = [];
         </div>
     </div>
 
-    <script src="{{ asset('js/sidebar-mobile.js') }}?v=1.0.0"></script>
+    <script src="{{ asset('js/sidebar-mobile.js') }}?v=1.2.0"></script>
 
-    <!-- Optimisation : Charger les scripts de manière asynchrone pour améliorer les performances -->
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous" defer>
-    </script>
+    {{-- Bootstrap JS + Alpine.js — hébergés localement --}}
+    @include('layouts.partials.vendor-scripts')
 
-    <!-- Alpine.js (déjà en defer, optimisé) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" crossorigin="anonymous"></script>
-
-    <!-- Fallback pour les CDN qui ne se chargent pas -->
+    <!-- Vérification du chargement des scripts vendor -->
     <script>
-        // Vérifier si Chart.js est chargé après un court délai
         setTimeout(function() {
             if (typeof Chart === 'undefined') {
-                console.warn('Chart.js n\'a pas pu être chargé depuis jsdelivr, tentative avec cdnjs...');
-                // Tentative de chargement alternatif depuis cdnjs
-                const chartScript = document.createElement('script');
-                chartScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
-                chartScript.crossOrigin = 'anonymous';
-                chartScript.onload = function() {
-                    console.log('Chart.js chargé depuis cdnjs');
-                };
-                chartScript.onerror = function() {
-                    console.error('Impossible de charger Chart.js depuis les CDN');
-                };
-                document.head.appendChild(chartScript);
+                console.error('Chart.js n\'a pas pu être chargé.');
             }
-        }, 500);
-
-        // Vérifier si Bootstrap est chargé (après un délai car il est en defer)
-        setTimeout(function() {
             if (typeof bootstrap === 'undefined') {
-                console.error('Bootstrap n\'a pas pu être chargé depuis le CDN');
+                console.error('Bootstrap n\'a pas pu être chargé.');
             }
         }, 1000);
 
         // Vérifier si Alpine.js est chargé (après un court délai car il est en defer)
         setTimeout(function() {
             if (typeof Alpine === 'undefined') {
-                console.error('Alpine.js n\'a pas pu être chargé depuis le CDN');
+                console.error('Alpine.js n\'a pas pu être chargé.');
             }
         }, 1000);
     </script>
@@ -564,7 +533,7 @@ $htmlClasses = [];
     </script>
 
     {{-- PWA : enregistrement Service Worker + bannière d'installation --}}
-    <script src="{{ asset('js/pwa-register.js') }}?v=1.4.0" defer></script>
+    <script src="{{ asset('js/pwa-register.js') }}?v=1.4.1" defer></script>
     @include('layouts.partials.pwa-scripts')
 
     {{-- Mode hors connexion : IndexedDB + bootstrap (Étape 2) --}}

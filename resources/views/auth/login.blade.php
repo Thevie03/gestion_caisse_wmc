@@ -22,9 +22,19 @@
                 <!-- Session Status -->
                 <x-auth-session-status class="mb-3" :status="session('status')" />
 
+                @if (request('source') === 'pwa')
+                    <div class="alert alert-info py-2 px-3 mb-3" role="status">
+                        <i class="fas fa-mobile-alt me-1"></i>
+                        Application WMC Caisse — connectez-vous pour accéder à votre espace.
+                    </div>
+                @endif
+
                 <!-- Login Form -->
                 <form method="POST" action="{{ route('login') }}" class="login-form">
                     @csrf
+                    @if (request('source') === 'pwa')
+                        <input type="hidden" name="source" value="pwa">
+                    @endif
 
                     <!-- Email Field -->
                     <div class="form-group">

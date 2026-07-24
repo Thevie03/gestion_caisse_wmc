@@ -15,7 +15,7 @@
     <div class="container-fluid">
         <div class="row align-items-center">
             <!-- Mobile Menu Toggle -->
-            <div class="col-auto d-lg-none">
+            <div class="col-auto d-lg-none topbar-hamburger-col">
                 <button type="button" id="sidebarToggle" class="wmc-sidebar-toggle" data-sidebar-toggle
                     aria-label="Ouvrir le menu de navigation" aria-expanded="false" aria-controls="sidebar">
                     <i class="fas fa-bars" aria-hidden="true"></i>
@@ -418,9 +418,27 @@
         @else
             const url = `{{ route('notifications.count') }}`;
         @endif
-        fetch(url)
-            .then(response => response.json())
+        fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return null;
+                }
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    return null;
+                }
+                return response.json();
+            })
             .then(data => {
+                if (!data) {
+                    return;
+                }
                 const badge = document.querySelector('#notificationDropdown .badge.bg-danger');
                 const newCount = data.count ?? 0;
                 if (newCount > previousNotificationCount) {
@@ -445,7 +463,7 @@
                     }
                 }
             })
-            .catch(error => console.error('Erreur:', error));
+            .catch(error => console.warn('Notifications:', error));
     }
 
     let notificationPollingDelay = 30000;

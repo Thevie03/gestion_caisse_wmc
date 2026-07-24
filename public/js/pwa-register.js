@@ -16,7 +16,7 @@
 
 
 
-    const SW_URL = '/service-worker.js?v=1.4.0';
+    const SW_URL = '/service-worker.js?v=1.4.4';
 
     const SW_SCOPE = '/';
 

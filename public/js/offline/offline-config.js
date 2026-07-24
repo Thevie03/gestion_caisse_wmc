@@ -3,11 +3,13 @@
  * Doit rester alignée avec public/service-worker.js (CACHE_VERSION, pages).
  */
 
-export const OFFLINE_CACHE_VERSION = 'wmc-caisse-v1.4.0';
+export const OFFLINE_CACHE_VERSION = 'wmc-caisse-v1.4.4';
 export const PAGES_CACHE_NAME = `${OFFLINE_CACHE_VERSION}-pages`;
 
 /** Pages à mettre en cache lors du bootstrap (session requise) */
 export const APP_PAGES_TO_CACHE = [
+    '/app',
+    '/login',
     '/dashboard',
     '/ventes/pos/interface',
     '/produits',

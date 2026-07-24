@@ -7,7 +7,7 @@
  * - API Laravel → network-first avec timeout court, JSON 503 si échec
  */
 
-const CACHE_VERSION = 'wmc-caisse-v1.4.0';
+const CACHE_VERSION = 'wmc-caisse-v1.4.4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const PAGES_CACHE = `${CACHE_VERSION}-pages`;
@@ -20,6 +20,8 @@ const API_TIMEOUT_MS = 3500;
 let forceOfflineNavigation = false;
 
 const APP_PAGES_TO_CACHE = [
+    '/app',
+    '/login',
     '/dashboard',
     '/ventes/pos/interface',
     '/produits',
@@ -33,13 +35,24 @@ const APP_PAGES_TO_CACHE = [
     '/ventes',
 ];
 
-const OFFLINE_FALLBACK_ROUTES = [...APP_PAGES_TO_CACHE, '/login'];
+const OFFLINE_FALLBACK_ROUTES = [...APP_PAGES_TO_CACHE, '/login', '/offline.html'];
 
 const PRECACHE_URLS = [
     '/offline.html',
     '/css/app.css',
     '/css/pwa-responsive.css',
+    '/vendor/bootstrap/css/bootstrap.min.css',
+    '/vendor/bootstrap/js/bootstrap.bundle.min.js',
+    '/vendor/fontawesome/css/all.min.css',
+    '/vendor/fontawesome/webfonts/fa-solid-900.woff2',
+    '/vendor/fontawesome/webfonts/fa-regular-400.woff2',
+    '/vendor/fontawesome/webfonts/fa-brands-400.woff2',
+    '/vendor/chartjs/chart.umd.min.js',
+    '/vendor/alpinejs/cdn.min.js',
     '/manifest.json',
+    '/images/icons/icon-192.png',
+    '/images/icons/icon-512.png',
+    '/images/icons/apple-touch-icon.png',
     '/js/pwa-register.js',
     '/js/sidebar-mobile.js',
     '/js/offline/offline-config.js',
@@ -57,8 +70,6 @@ const PRECACHE_URLS = [
 
 const CDN_ORIGINS = [
     'https://fonts.bunny.net',
-    'https://cdnjs.cloudflare.com',
-    'https://cdn.jsdelivr.net',
 ];
 
 const KEEP_CACHES = new Set([STATIC_CACHE, RUNTIME_CACHE, PAGES_CACHE]);
@@ -225,8 +236,19 @@ async function handleNavigation(request) {
         const response = await fetchWithTimeout(request, NAV_TIMEOUT_MS);
         if (response.ok && isHtmlResponse(response)) {
             await putPageInCache(request, response);
+            return response;
         }
-        return response;
+
+        const fallback = await matchOfflineFallbackPage(request);
+        if (fallback) {
+            return fallback;
+        }
+
+        if (response.ok) {
+            return response;
+        }
+
+        return getOfflineFallbackResponse();
     } catch {
         const fallback = await matchOfflineFallbackPage(request);
         if (fallback) {
@@ -283,6 +305,7 @@ self.addEventListener('install', (event) => {
         caches
             .open(STATIC_CACHE)
             .then((cache) => cache.addAll(PRECACHE_URLS))
+            .then(() => precacheAppUrls(['/app', '/login?source=pwa', '/offline.html']))
             .then(() => self.skipWaiting())
             .catch((error) => console.warn('[SW] Pré-cache partiel :', error))
     );
